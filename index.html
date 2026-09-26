@@ -1,1 +1,373 @@
-The requested file reference is not currently visible. Use files.search or files.list to rediscover the file, then retry with a returned ref_id or file_id.
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#4f46e5" />
+<title>Dictation Rush</title>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#ffffffee; --ink:#172033; --muted:#67728a;
+    --brand:#6d5dfc; --good:#16a34a; --bad:#dc2626; --gold:#f59e0b;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;min-height:100%;background:#0d1530;font-family:ui-rounded,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);overflow:hidden}
+  button,input,textarea{font:inherit}
+  button{border:0;border-radius:16px;padding:14px 18px;font-weight:800;cursor:pointer}
+  .app{width:100vw;height:100dvh;position:relative;overflow:hidden;background:linear-gradient(#88d5ff,#b9efff 42%,#a9e077 43%,#7ac653)}
+  #gameCanvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;display:block}
+  .safeTop{padding-top:max(10px,env(safe-area-inset-top))}
+  .safeBottom{padding-bottom:max(10px,env(safe-area-inset-bottom))}
+  .hidden{display:none!important}
+  .screen{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:18px;background:linear-gradient(180deg,#6f7cff 0%,#a28df8 44%,#f0b6e8 100%)}
+  .card{width:min(94vw,520px);max-height:92dvh;overflow:auto;background:#fff;border-radius:28px;padding:20px;box-shadow:0 22px 70px #17255455}
+  .logo{font-size:clamp(34px,9vw,54px);font-weight:1000;letter-spacing:-2px;line-height:.92;margin:0 0 8px}
+  .logo span{display:block;color:#6d5dfc}
+  .subtitle{color:#667085;font-weight:700;margin-bottom:18px}
+  .menuGrid{display:grid;gap:10px}
+  .primary{background:linear-gradient(135deg,#6d5dfc,#4f46e5);color:#fff;box-shadow:0 8px 18px #6d5dfc44}
+  .secondary{background:#eef0ff;color:#4238bd}
+  .soft{background:#f4f6fb;color:#334155}
+  .danger{background:#fee2e2;color:#991b1b}
+  .tiny{font-size:12px;color:#667085}
+  .hud{position:absolute;z-index:10;inset:0 0 auto 0;padding:max(8px,env(safe-area-inset-top)) 10px 0;pointer-events:none}
+  .hudRow{display:flex;gap:8px;align-items:center;justify-content:space-between}
+  .pill{background:#ffffffdd;backdrop-filter:blur(8px);border:1px solid #ffffffaa;border-radius:999px;padding:8px 11px;font-weight:900;box-shadow:0 4px 12px #0002}
+  .pill.badge{color:#4338ca}
+  .questionBox{position:absolute;z-index:11;top:max(58px,calc(env(safe-area-inset-top) + 50px));left:12px;right:12px;background:#ffffffed;border-radius:20px;padding:12px 14px;box-shadow:0 8px 24px #1f293733;text-align:center}
+  .qType{font-size:11px;letter-spacing:.8px;text-transform:uppercase;font-weight:1000;color:#7c3aed}
+  .qText{font-size:clamp(18px,4.8vw,24px);font-weight:950;line-height:1.18;margin-top:3px}
+  .qHint{font-size:12px;color:#64748b;font-weight:700;margin-top:5px}
+  .audioBtn{pointer-events:auto;position:absolute;right:13px;top:max(116px,calc(env(safe-area-inset-top) + 108px));z-index:12;width:46px;height:46px;border-radius:50%;padding:0;background:#fff;color:#4338ca;box-shadow:0 5px 18px #0002;font-size:22px}
+  .feedback{position:absolute;z-index:30;left:50%;top:50%;transform:translate(-50%,-50%);width:min(90vw,440px);background:#fffffff8;border-radius:24px;padding:18px;text-align:center;box-shadow:0 24px 80px #0005}
+  .feedback h2{margin:0 0 8px;font-size:28px}.feedback p{margin:6px 0;color:#475569;font-weight:700}.feedback .teach{background:#f8fafc;border-radius:15px;padding:10px;margin-top:10px;font-weight:900}
+  .typeOverlay{position:absolute;z-index:25;inset:0;background:#101828bb;display:flex;align-items:center;justify-content:center;padding:16px}
+  .typeCard{width:min(94vw,520px);background:white;border-radius:24px;padding:18px}
+  .typeCard h3{margin:0 0 8px}.typeCard textarea,.typeCard input{width:100%;border:2px solid #d7dcf5;border-radius:14px;padding:13px 14px;font-size:18px;outline:none;background:#fbfcff}.typeCard textarea{min-height:115px;resize:none}
+  .typeActions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+  .progressBar{height:10px;background:#e8eaf5;border-radius:999px;overflow:hidden;margin:10px 0 14px}.progressFill{height:100%;background:linear-gradient(90deg,#6d5dfc,#ec4899);width:0}
+  .resultRow{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #edf0f6}.resultRow:last-child{border-bottom:0}
+  .tag{display:inline-flex;padding:5px 9px;border-radius:999px;background:#eef2ff;color:#4338ca;font-size:12px;font-weight:900;margin:3px}
+  .diffBad{background:#fee2e2;color:#991b1b;padding:1px 4px;border-radius:5px}.diffGood{background:#dcfce7;color:#166534;padding:1px 4px;border-radius:5px}
+  .settingsRow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #edf0f6}.switch{width:54px;height:30px;border-radius:999px;background:#cbd5e1;position:relative;cursor:pointer}.switch.on{background:#6d5dfc}.switch:after{content:"";width:24px;height:24px;background:white;border-radius:50%;position:absolute;top:3px;left:3px;transition:.15s}.switch.on:after{left:27px}
+  .smallBtns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.smallBtns button{padding:9px 12px;border-radius:12px}
+  @media (min-width:700px){.app{width:min(480px,100vw);height:100dvh;margin:auto}.questionBox{left:18px;right:18px}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <canvas id="gameCanvas"></canvas>
+
+  <div class="hud hidden" id="hud">
+    <div class="hudRow">
+      <div class="pill">👥 <span id="armyNum">10</span></div>
+      <div class="pill badge">⭐ <span id="scoreNum">0</span></div>
+      <div class="pill">⚔️ <span id="powerNum">10</span></div>
+      <div class="pill"><span id="stageNum">1</span>/16</div>
+    </div>
+  </div>
+  <div class="questionBox hidden" id="questionBox">
+    <div class="qType" id="qType">MEANING GATE</div>
+    <div class="qText" id="qText"></div>
+    <div class="qHint" id="qHint">Swipe left / right to choose a gate</div>
+  </div>
+  <button class="audioBtn hidden" id="audioBtn" aria-label="Play audio">🔊</button>
+
+  <div class="screen" id="homeScreen">
+    <div class="card safeTop safeBottom">
+      <div class="logo">DICTATION <span>RUSH</span></div>
+      <div class="subtitle">P4 English • run, collect, spell, listen, conquer.</div>
+      <div class="menuGrid">
+        <button class="primary" id="startRunBtn" type="button">▶ Start Run</button>
+        <div id="engineStatus" class="tiny" style="text-align:center;padding:6px 0;color:#475569">Loading game engine…</div>
+        <button class="secondary" id="testModeBtn">🎧 Dictation Test</button>
+        <button class="secondary" id="reviewBtn">🧠 Review Weak Words</button>
+        <button class="soft" id="progressBtn">📈 Progress</button>
+        <button class="soft" id="settingsBtn">⚙️ Settings</button>
+      </div>
+      <p class="tiny" style="margin-top:14px">Tip: turn sound on. Audio starts after you tap a button because mobile browsers block autoplay.</p>
+    </div>
+  </div>
+
+  <div class="feedback hidden" id="feedback">
+    <h2 id="fbTitle"></h2><p id="fbText"></p><div class="teach hidden" id="fbTeach"></div>
+    <button class="primary" style="width:100%;margin-top:12px" id="fbContinue">Continue</button>
+  </div>
+
+  <div class="typeOverlay hidden" id="typeOverlay">
+    <div class="typeCard">
+      <div class="qType" id="typeLabel">SPELLING</div>
+      <h3 id="typePrompt"></h3>
+      <div class="tiny" id="typeHint"></div>
+      <textarea id="typeInput" autocomplete="off" autocapitalize="sentences" spellcheck="false"></textarea>
+      <div class="typeActions"><button class="secondary" id="typeAudio">🔊 Replay</button><button class="primary" id="typeSubmit">Submit</button></div>
+    </div>
+  </div>
+
+  <div class="screen hidden" id="modalScreen">
+    <div class="card safeTop safeBottom" id="modalCard"></div>
+  </div>
+</div>
+<script>
+(()=>{
+'use strict';
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const norm=s=>s.toLowerCase().replace(/[’']/g,"'").replace(/[^a-z0-9' ]/g,'').replace(/\s+/g,' ').trim();
+const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+const sentences=[
+ {id:'s1',text:'I have many hobbies. For example, I like playing sports.', focus:['hobbies','For example','sports']},
+ {id:'s2',text:'I usually play baseball with my classmates after school on Mondays.', focus:['usually','baseball','Mondays','classmates']},
+ {id:'s3',text:'I sometimes perform in parades at summer festivals.', focus:['sometimes','perform','parades','summer festivals']},
+ {id:'s4',text:'My favourite hobby is reading comic books. I am crazy about them!', focus:['favourite','comic books','crazy about']},
+ {id:'s5',text:'My parents always take lots of photos of me because they think I look wonderful in the costume.', focus:['parents','always','photos','wonderful','costume']},
+ {id:'s6',text:'I enjoy having a barbecue with my family at the end of the day too.', focus:['enjoy','barbecue','family','at the end of']}
+];
+const vocab=[
+ {w:'hobbies',meaning:'things you enjoy doing in your free time',wrong:['school subjects','homework tasks']},
+ {w:'for example',meaning:'used before giving an example',wrong:['used to show the ending','used to ask a question']},
+ {w:'sports',meaning:'physical games or activities',wrong:['books and stories','clothes for festivals']},
+ {w:'usually',meaning:'most of the time',wrong:['never','only one time']},
+ {w:'baseball',meaning:'a bat-and-ball sport',wrong:['a swimming race','a dance show']},
+ {w:'mondays',meaning:'the day after Sunday',wrong:['the day before Sunday','a summer holiday']},
+ {w:'sometimes',meaning:'on some occasions, but not always',wrong:['every single time','not even once']},
+ {w:'perform',meaning:'to entertain people by acting, dancing or playing',wrong:['to hide quietly','to fall asleep']},
+ {w:'parades',meaning:'public processions or marches',wrong:['private bedrooms','school notebooks']},
+ {w:'favourite',meaning:'liked more than the others',wrong:['least liked','completely unknown']},
+ {w:'comic books',meaning:'books that tell stories with pictures and speech bubbles',wrong:['recipe books','dictionaries only']},
+ {w:'parents',meaning:'a mother and/or father',wrong:['classmates only','teachers only']},
+ {w:'always',meaning:'every time',wrong:['never','rarely']},
+ {w:'photos',meaning:'pictures taken with a camera',wrong:['songs','meals']},
+ {w:'wonderful',meaning:'very good or delightful',wrong:['terrible','empty']},
+ {w:'enjoy',meaning:'to like doing or experiencing something',wrong:['to dislike everything','to forget']},
+ {w:'family',meaning:'people related to you, such as parents and children',wrong:['a sports team only','people in a shop']},
+ {w:'at the end of',meaning:'in the final part of something',wrong:['at the very beginning of','in the middle of only']},
+ {w:'barbecue',meaning:'a meal where food is cooked on a grill',wrong:['a maths lesson','a music instrument']},
+ {w:'costume',meaning:'special clothes worn for a show or event',wrong:['a school timetable','a camera']}
+];
+const misspell={favourite:'favorit',wonderful:'wonderfull',sometimes:'sometime',usually:'usualy',baseball:'basebal',photos:'photoes',hobbies:'hobbys',parents:'parants',family:'famly',barbecue:'barbeque',costume:'costum',perform:'preform'};
+const storeKey='dictationRushP4_v1';
+let save={mastery:{},attempts:0,totalCorrect:0,totalAnswered:0,lastTest:null,music:true,sfx:true,unlocks:[]};
+try{Object.assign(save,JSON.parse(localStorage.getItem(storeKey)||'{}')); save.mastery=save.mastery||{}}catch(e){}
+function persist(){try{localStorage.setItem(storeKey,JSON.stringify(save))}catch(e){}}
+function mastery(w){return save.mastery[w]??50}
+function bump(w,ok){save.mastery[w]=clamp(mastery(w)+(ok?7:-10),0,100);persist()}
+function weakest(n=5){return [...vocab].sort((a,b)=>mastery(a.w)-mastery(b.w)).slice(0,n)}
+
+const canvas=$('#gameCanvas');
+const ctx=canvas && canvas.getContext ? canvas.getContext('2d') : null;
+if(!canvas) throw new Error('Game canvas is missing.');
+if(!ctx) throw new Error('Your browser could not create a 2D canvas. Please open this file in Safari/Chrome, not a document preview.');
+let W=390,H=844,dpr=1;
+function resize(){const r=canvas.getBoundingClientRect();dpr=Math.min(devicePixelRatio||1,2);W=r.width;H=r.height;canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0)}
+addEventListener('resize',resize);resize();
+
+let audioCtx=null,musicTimer=null,musicStep=0;
+function ensureAudio(){
+ try{if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') audioCtx.resume(); if(save.music) startMusic()}catch(e){}
+}
+function tone(freq=440,dur=.08,gain=.04,type='sine',delay=0){if(!save.sfx||!audioCtx)return;const t=audioCtx.currentTime+delay,o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(gain,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);o.connect(g).connect(audioCtx.destination);o.start(t);o.stop(t+dur)}
+function correctSound(){tone(660,.08,.04,'triangle');tone(880,.12,.03,'triangle',.07)}
+function wrongSound(){tone(150,.16,.035,'sawtooth')}
+function startMusic(){if(musicTimer||!audioCtx||!save.music)return;const seq=[261,329,392,523,392,329,293,349,440,587,440,349];musicTimer=setInterval(()=>{if(!save.music||!audioCtx)return;const f=seq[musicStep++%seq.length],t=audioCtx.currentTime,o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type='triangle';o.frequency.value=f;g.gain.setValueAtTime(.012,t);g.gain.exponentialRampToValueAtTime(.001,t+.18);o.connect(g).connect(audioCtx.destination);o.start(t);o.stop(t+.2)},220)}
+function stopMusic(){clearInterval(musicTimer);musicTimer=null}
+function speak(text,rate=0.95){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='en-GB';u.rate=rate;u.pitch=1.03;speechSynthesis.speak(u)}catch(e){}}
+
+const ui={hud:$('#hud'),question:$('#questionBox'),qType:$('#qType'),qText:$('#qText'),qHint:$('#qHint'),audio:$('#audioBtn'),army:$('#armyNum'),score:$('#scoreNum'),power:$('#powerNum'),stage:$('#stageNum'),home:$('#homeScreen'),modal:$('#modalScreen'),modalCard:$('#modalCard'),feedback:$('#feedback'),fbTitle:$('#fbTitle'),fbText:$('#fbText'),fbTeach:$('#fbTeach'),fbContinue:$('#fbContinue'),type:$('#typeOverlay'),typeLabel:$('#typeLabel'),typePrompt:$('#typePrompt'),typeHint:$('#typeHint'),typeInput:$('#typeInput'),typeAudio:$('#typeAudio'),typeSubmit:$('#typeSubmit')};
+let state={mode:'home',running:false,army:10,score:0,stage:0,totalStages:16,questions:[],current:null,gateY:-100,playerX:0.5,targetX:0.5,lastT:0,paused:false,pendingRetry:[],boss:false,bossStep:0,bossQuestions:[],zone:0,particles:[],roadShift:0,collect:null,readingUntil:0,battle:null,blockedEnemy:null,kills:0};
+
+function makeMeaningQuestion(item){const choices=shuffle([{t:item.meaning,ok:true,m:Math.random()<.25?5:10},...item.wrong.slice(0,2).map(x=>({t:x,ok:false,m:Math.random()<.5?20:50}))]);return {kind:'meaning',type:'MEANING GATE',prompt:`What does “${item.w}” mean?`,choices,word:item.w,audio:item.w};}
+function makeSpellingChoice(item){const bad=misspell[item.w]||item.w.replace(/[aeiou]/i,'');const choices=shuffle([{t:item.w,ok:true,m:5},{t:bad,ok:false,m:50}]);return {kind:'spellingChoice',type:'SPELLING GATE',prompt:'Choose the correct spelling',choices,word:item.w,audio:item.w};}
+function makeFillQuestion(s){let focus=shuffle(s.focus)[0];let re=new RegExp(focus.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i');let prompt=s.text.replace(re,'_____');let distract=(focus==='usually'?'usual':focus==='sometimes'?'always':focus==='favourite'?'favour':focus==='always'?'sometimes':focus==='enjoy'?'enjoys':focus==='at the end of'?'at the start of':(misspell[focus]||'not this'));
+ return {kind:'fill',type:'SENTENCE GATE',prompt,choices:shuffle([{t:focus,ok:true,m:5},{t:distract,ok:false,m:20}]),word:focus,audio:s.text};}
+function makeLetterCollect(item){return {kind:'letters',type:'LETTER RUSH',prompt:`Collect the letters in order: ${item.w.toUpperCase()}`,word:item.w,audio:item.w,letters:item.w.replace(/ /g,'').toUpperCase()};}
+function makeTypeQuestion(s,full=false){let w=shuffle(s.focus.filter(x=>x.length<15))[0]||s.focus[0];return full?{kind:'typeSentence',type:'LISTEN & TYPE',prompt:'Listen and type the full sentence.',answer:s.text,word:w,audio:s.text}:{kind:'typeWord',type:'TYPE THE WORD',prompt:`Listen and type the word:`,answer:w,word:w,audio:w};}
+function buildRun(){
+ const weak=weakest(6), all=shuffle(vocab), qs=[];
+ for(const it of weak.slice(0,3)){qs.push(makeMeaningQuestion(it),makeSpellingChoice(it))}
+ sentences.forEach(s=>qs.push(makeFillQuestion(s)));
+ qs.push(makeLetterCollect(all.find(x=>x.w==='wonderful')||all[0]));
+ qs.push(makeLetterCollect(all.find(x=>x.w==='favourite')||all[1]));
+ qs.push(makeTypeQuestion(sentences[1],false));
+ qs.push(makeTypeQuestion(sentences[4],true));
+ while(qs.length<16) qs.push(makeMeaningQuestion(all[qs.length%all.length]));
+ return shuffle(qs).slice(0,16);
+}
+function buildBoss(){return [makeMeaningQuestion(vocab.find(v=>v.w==='perform')),makeSpellingChoice(vocab.find(v=>v.w==='favourite')),makeFillQuestion(sentences[5]),makeTypeQuestion(sentences[4],true)];}
+
+function startRun(){
+ ui.home.classList.add('hidden');ui.modal.classList.add('hidden');ui.hud.classList.remove('hidden');ui.question.classList.remove('hidden');
+ ensureAudio();
+ const runQuestions=buildRun(), bossQuestions=buildBoss();
+ if(runQuestions.length!==16) throw new Error('Run question bank did not build correctly.');
+ if(bossQuestions.length!==4) throw new Error('Boss question bank did not build correctly.');
+ state={...state,mode:'run',running:true,army:10,score:0,stage:0,totalStages:16,questions:runQuestions,current:null,gateY:-120,playerX:.5,targetX:.5,paused:false,pendingRetry:[],boss:false,bossStep:0,bossQuestions:bossQuestions,zone:0,collect:null,readingUntil:0,battle:null,blockedEnemy:null,kills:0,lastT:performance.now()};
+ save.attempts++;persist();nextQuestion();requestAnimationFrame(loop);
+}
+function safeStartRun(){
+ try{startRun()}catch(err){
+   console.error('Dictation Rush start failed',err);
+   state.running=false;ui.hud.classList.add('hidden');ui.question.classList.add('hidden');
+   showModal('<h2 style="margin-top:0">⚠️ Game start error</h2><p style="font-weight:700">'+esc(err&&err.message?err.message:String(err))+'</p><p class="tiny">Please open the downloaded HTML directly in Safari or Chrome. Some in-app/document previews display HTML but block JavaScript or Canvas.</p><button class="soft" style="width:100%;margin-top:12px" id="errorHomeBtn">Back</button>');
+   setTimeout(()=>{const b=$('#errorHomeBtn');if(b)b.onclick=home},0);
+ }
+}
+function nextQuestion(){
+ if(state.pendingRetry.length && Math.random()<.35) state.questions.splice(Math.min(state.stage+2,state.questions.length),0,state.pendingRetry.shift());
+ if(state.stage>=state.totalStages){startBoss();return}
+ state.current=state.questions[state.stage];state.zone=Math.min(3,Math.floor(state.stage/4));state.gateY=H*.18;state.collect=null;state.paused=false;state.battle=null;setReadingWindow(state.current);ui.stage.textContent=state.stage+1;ui.army.textContent=state.army;ui.score.textContent=state.score;ui.power.textContent=state.army;renderQuestionUI();
+ if(state.current.kind.startsWith('type')){state.paused=true;openType(state.current)} else if(state.current.kind==='letters'){setupCollect(state.current)}
+}
+function readingMs(q){const base=q.kind==='letters'?2800:3800;return clamp(base+String(q.prompt||'').length*34,3200,8200)}
+function setReadingWindow(q){state.readingUntil=performance.now()+readingMs(q)}
+function updateReadHint(now){if(!state.current||state.paused||state.current.kind.startsWith('type'))return;const left=state.readingUntil-now;if(left>0){ui.qHint.textContent=`📖 Read first • gates move in ${Math.ceil(left/1000)}s`}else{ui.qHint.textContent=state.current.kind==='letters'?'Steer into the next correct letter':'Swipe / drag left or right to choose'}}
+function renderQuestionUI(){let q=state.current;ui.qType.textContent=q.type;ui.qText.textContent=q.prompt;ui.qHint.textContent='📖 Read first…';ui.audio.classList.toggle('hidden',!q.audio);ui.question.classList.remove('hidden')}
+function setupCollect(q){state.collect={index:0,items:[],nextSpawn:0};state.gateY=-999}
+function openType(q){ui.type.classList.remove('hidden');ui.typeLabel.textContent=q.type;ui.typePrompt.textContent=q.prompt;ui.typeHint.textContent=q.kind==='typeSentence'?'Capital letters and punctuation earn bonus marks. Words matter most.':'';ui.typeInput.value='';setTimeout(()=>ui.typeInput.focus(),100);speak(q.audio);}
+function typeSubmit(){const q=state.current,v=ui.typeInput.value.trim();if(!v)return;const ok=norm(v)===norm(q.answer);const similarity=wordSimilarity(norm(v),norm(q.answer));ui.type.classList.add('hidden');resolveAnswer(ok,q,similarity,v);}
+function wordSimilarity(a,b){const A=a.split(' '),B=b.split(' ');let hit=0;A.forEach((w,i)=>{if(B[i]===w)hit++});return B.length?hit/B.length:0}
+function resolveGate(choice){if(!state.current||state.paused)return;resolveAnswer(!!choice.ok,state.current,choice.ok?1:0,'',choice)}
+function resolveAnswer(ok,q,similarity=0,typed='',choice=null){
+ state.paused=true;save.totalAnswered++;if(ok)save.totalCorrect++;bump(q.word,ok);
+ if(ok){const mult=choice?.m||1;state.army=clamp(Math.round(state.army*(q.kind==='meaning'||q.kind==='fill'||q.kind==='spellingChoice'?mult:1)+10),1,99999);state.score+=Math.round(100+(similarity||1)*100);correctSound();showFeedback(true,'Correct!',choice?`Great choice • ×${mult}`:'Nice work!',`Mastery: ${mastery(q.word)}%`)}
+ else {state.army=Math.max(5,Math.round(state.army*.65));state.score=Math.max(0,state.score-20);wrongSound();state.pendingRetry.push(retryVariant(q));const answer=q.answer||q.choices?.find(c=>c.ok)?.t||q.word;showFeedback(false,'Try again soon',`Your army lost a few helpers.`,`${answer}${typed?`\nYou typed: ${typed}`:''}`)}
+ persist();ui.army.textContent=state.army;ui.score.textContent=state.score;ui.power.textContent=state.army;
+}
+function retryVariant(q){const it=vocab.find(v=>v.w===q.word);if(it&&q.kind!=='meaning')return makeMeaningQuestion(it);if(it)return makeSpellingChoice(it);return q}
+function showFeedback(ok,title,text,teach){ui.fbTitle.textContent=ok?'✅ '+title:'💡 '+title;ui.fbText.textContent=text;ui.fbTeach.textContent=teach||'';ui.fbTeach.classList.toggle('hidden',!teach);ui.feedback.classList.remove('hidden')}
+ui.fbContinue.onclick=()=>{ui.feedback.classList.add('hidden');beginEnemyBattle()};
+
+function enemySpec(){
+ const idx=state.stage+1, checkpoint=idx%4===0;
+ if(state.blockedEnemy)return {...state.blockedEnemy,checkpoint:true};
+ let tier=idx<=5?'SMALL':idx<=10?'MID':'LARGE';
+ let hp=tier==='SMALL'?45+idx*24:tier==='MID'?260+idx*95:1200+idx*360;
+ if(checkpoint){tier=idx===4?'MID':idx===8?'LARGE':'GIANT';hp=[0,0,0,260,0,0,0,1500,0,0,0,7000,0,0,0,26000][idx-1]||hp*2}
+ return {tier,hp,maxHp:hp,checkpoint};
+}
+function beginEnemyBattle(){
+ state.paused=true;state.questionWasHidden=true;ui.question.classList.add('hidden');ui.audio.classList.add('hidden');
+ const e=enemySpec();state.battle={...e,y:H*.24,start:performance.now(),phase:'approach',result:null};
+}
+function finishEnemyBattle(){
+ const b=state.battle;if(!b)return;const attack=state.army;
+ if(attack>=b.hp){
+   const loss=Math.max(2,Math.round(b.hp*(b.tier==='SMALL'?.05:b.tier==='MID'?.07:.09)));
+   state.army=Math.max(5,state.army-loss);state.score+=Math.round(b.maxHp*.35);state.kills++;state.blockedEnemy=null;correctSound();particles('#fde68a');
+   state.battle={...b,phase:'defeated',result:'win',end:performance.now()};ui.army.textContent=state.army;ui.power.textContent=state.army;ui.score.textContent=state.score;
+   setTimeout(()=>{state.battle=null;state.stage++;nextQuestion()},850);
+ }else{
+   const remaining=Math.max(1,b.hp-attack);state.army=Math.max(5,Math.round(state.army*.72));state.blockedEnemy={tier:b.tier,hp:remaining,maxHp:b.maxHp};wrongSound();
+   state.battle={...b,hp:remaining,phase:'blocked',result:'lose',end:performance.now()};ui.army.textContent=state.army;ui.power.textContent=state.army;
+   setTimeout(()=>{
+     state.battle=null;const v=weakest(1)[0];state.questions[state.stage]=makeMeaningQuestion(v);state.current=state.questions[state.stage];setReadingWindow(state.current);renderQuestionUI();ui.qType.textContent='RECOVERY QUESTION';ui.qHint.textContent=`⚔️ ${b.tier} enemy still has ${remaining} power. Answer correctly to grow your army.`;state.paused=false;
+   },1100);
+ }
+}
+function startBoss(){state.boss=true;state.bossStep=0;state.paused=false;state.current=state.bossQuestions[0];ui.stage.textContent='BOSS';renderQuestionUI();setReadingWindow(state.current);if(state.current.kind.startsWith('type')){state.paused=true;openType(state.current)}else state.gateY=H*.18}
+function bossAdvance(ok){/* reserved */}
+
+function endRun(){state.running=false;ui.hud.classList.add('hidden');ui.question.classList.add('hidden');ui.audio.classList.add('hidden');showRunResults()}
+function showRunResults(){const acc=save.totalAnswered?Math.round(save.totalCorrect/save.totalAnswered*100):0;showModal(`<h2 style="margin-top:0">🏆 Run Complete</h2><div class="resultRow"><b>Army</b><b>${state.army.toLocaleString()}</b></div><div class="resultRow"><b>Score</b><b>${state.score}</b></div><div class="resultRow"><b>Enemies defeated</b><b>${state.kills}</b></div><div class="resultRow"><b>Overall accuracy</b><b>${acc}%</b></div><h3>Review these next</h3><div>${weakest(3).map(v=>`<span class="tag">${esc(v.w)} ${mastery(v.w)}%</span>`).join('')}</div><div class="menuGrid" style="margin-top:16px"><button class="primary" onclick="window.DR.startRun()">Play again</button><button class="soft" onclick="window.DR.home()">Home</button></div>`)}
+
+function zoneColors(z){return [['#85d8ff','#bdefff','#a4dc73','#65ba56'],['#8ed8ff','#c8f2ff','#78c8e8','#4fa1d7'],['#b39cff','#e0c6ff','#b178d5','#7852bd'],['#ffb86f','#ffe0a3','#df7c48','#a44e39']][z]}
+function draw(){ctx.clearRect(0,0,W,H);const c=zoneColors(state.zone);let g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,c[0]);g.addColorStop(.38,c[1]);g.addColorStop(.39,c[2]);g.addColorStop(1,c[3]);ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+ // distant scenery
+ ctx.globalAlpha=.35;ctx.fillStyle='#fff';for(let i=0;i<6;i++){let x=((i*97+state.roadShift*.15)% (W+100))-50,y=H*.23+(i%2)*18;ctx.beginPath();ctx.arc(x,y,20,0,Math.PI*2);ctx.fill()}ctx.globalAlpha=1;
+ // road perspective
+ const topW=W*.38,bottomW=W*.94,cx=W/2,topY=H*.25,bottomY=H*1.03;ctx.fillStyle='#e8edf4';ctx.beginPath();ctx.moveTo(cx-topW/2,topY);ctx.lineTo(cx+topW/2,topY);ctx.lineTo(cx+bottomW/2,bottomY);ctx.lineTo(cx-bottomW/2,bottomY);ctx.closePath();ctx.fill();
+ ctx.strokeStyle='#ffffff99';ctx.lineWidth=2;for(let i=1;i<3;i++){ctx.beginPath();ctx.moveTo(cx-topW/2+topW*i/3,topY);ctx.lineTo(cx-bottomW/2+bottomW*i/3,bottomY);ctx.stroke()}
+ // moving road ticks
+ ctx.strokeStyle='#cbd5e188';for(let i=0;i<12;i++){let yy=((i*70+state.roadShift)%840);let p=yy/H,ww=topW+(bottomW-topW)*p;ctx.beginPath();ctx.moveTo(cx-ww/2,yy);ctx.lineTo(cx+ww/2,yy);ctx.stroke()}
+ if(state.current && !state.paused && !state.battle){if(state.current.kind==='letters')drawLetters(); else drawGates()}
+ if(state.battle)drawEnemyBattle();
+ drawCrowd();drawParticles();if(state.boss)drawBoss();
+}
+function laneCenter(i,n,y){const p=clamp((y-H*.25)/(H*.78),0,1),rw=(W*.38)+(W*.94-W*.38)*p,left=W/2-rw/2;return left+rw*(i+.5)/n}
+function drawGates(){const q=state.current,n=q.choices.length,y=state.gateY;const p=clamp((y-H*.25)/(H*.78),0,1),gateW=(W*.33)+(W*.02*p),gateH=68+28*p;for(let i=0;i<n;i++){const ch=q.choices[i],x=laneCenter(i,n,y);ctx.fillStyle=ch.ok?'#5f75ff':'#38bdf8';ctx.strokeStyle='#ffffff';ctx.lineWidth=4;roundRect(ctx,x-gateW/2,y-gateH/2,gateW,gateH,14,true,true);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`900 ${clamp(13+5*p,13,18)}px system-ui`;wrapText(ch.t,x,y-8,gateW-10,18);ctx.font=`1000 ${clamp(16+7*p,16,23)}px system-ui`;ctx.fillText('×'+ch.m,x,y+gateH*.27)} }
+function setupLetterItems(){const col=state.collect,q=state.current;if(!col)return;if(col.items.length<3 && col.index<q.letters.length){while(col.items.length<3){const correct=q.letters[col.index];const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ';let fake=alphabet[Math.floor(Math.random()*alphabet.length)];if(fake===correct)fake='X';const lane=Math.floor(Math.random()*3);const isCorrect=col.items.length===0;col.items.push({char:isCorrect?correct:fake,lane:(lane+col.items.length)%3,y:H*.2-col.items.length*55,correct:isCorrect});}}}
+function drawLetters(){setupLetterItems();const col=state.collect;if(!col)return;for(const it of col.items){const x=laneCenter(it.lane,3,it.y);ctx.save();ctx.translate(x,it.y);const s=1+.08*Math.sin(performance.now()/180+it.y);ctx.scale(s,s);ctx.fillStyle='#fff';ctx.shadowColor='#4f46e5';ctx.shadowBlur=14;ctx.beginPath();ctx.arc(0,0,27,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='#4f46e5';ctx.font='1000 28px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(it.char,0,1);ctx.restore()}}
+function drawEnemyBattle(){const b=state.battle;if(!b)return;const x=W/2,y=b.y;ctx.save();const scale=b.tier==='SMALL'?.72:b.tier==='MID'?1:b.tier==='LARGE'?1.28:1.55;ctx.translate(x,y);ctx.scale(scale,scale);ctx.fillStyle=b.phase==='defeated'?'#94a3b8':b.tier==='SMALL'?'#ef4444':b.tier==='MID'?'#f97316':b.tier==='LARGE'?'#7c3aed':'#3f1d68';ctx.beginPath();ctx.arc(0,0,34,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-12,-7,6,0,Math.PI*2);ctx.arc(12,-7,6,0,Math.PI*2);ctx.fill();ctx.fillStyle='#111827';ctx.beginPath();ctx.arc(-12,-6,2.8,0,Math.PI*2);ctx.arc(12,-6,2.8,0,Math.PI*2);ctx.fill();ctx.restore();
+ const bw=Math.min(W*.55,220),bx=(W-bw)/2,by=y+48;ctx.fillStyle='#ffffffdd';roundRect(ctx,bx-4,by-4,bw+8,28,14,true,false);ctx.fillStyle='#e5e7eb';roundRect(ctx,bx,by,bw,20,10,true,false);ctx.fillStyle=b.phase==='blocked'?'#dc2626':'#ef4444';roundRect(ctx,bx,by,bw*clamp(b.hp/b.maxHp,0,1),20,10,true,false);ctx.fillStyle='#111827';ctx.font='900 12px system-ui';ctx.textAlign='center';ctx.fillText(`${b.tier} ENEMY • ${Math.ceil(b.hp)} power`,W/2,by+14);
+ if(b.phase==='approach'){ctx.fillStyle='#fff';ctx.font='1000 20px system-ui';ctx.fillText('⚔️ ENEMY WAVE!',W/2,y-62)}else if(b.phase==='defeated'){ctx.fillStyle='#166534';ctx.font='1000 22px system-ui';ctx.fillText('DEFEATED! 💥',W/2,y-62)}else if(b.phase==='blocked'){ctx.fillStyle='#991b1b';ctx.font='1000 18px system-ui';ctx.fillText('TOO STRONG — LEARN & POWER UP!',W/2,y-62)}}
+function drawCrowd(){const px=W*(.18+.64*state.playerX),py=H*.79;const count=clamp(Math.floor(Math.log10(Math.max(10,state.army))*10),12,34);for(let i=count-1;i>=0;i--){const row=Math.floor(i/7),col=i%7,offset=(col-3)*9+(row%2?4:0);ctx.fillStyle=i===0?'#ffdd55':'#4569f7';ctx.beginPath();ctx.arc(px+offset,py+row*7,6,0,Math.PI*2);ctx.fill();ctx.fillStyle='#163ea8';ctx.fillRect(px+offset-4,py+row*7+4,8,7)}ctx.fillStyle='#fff';ctx.strokeStyle='#334155';ctx.lineWidth=2;roundRect(ctx,px-34,py+42,68,24,12,true,true);ctx.fillStyle='#1f2937';ctx.font='900 13px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(state.army.toLocaleString(),px,py+54)}
+function drawBoss(){const x=W/2,y=H*.24;ctx.fillStyle='#772e8f';ctx.beginPath();ctx.arc(x,y,44,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x-15,y-8,7,0,Math.PI*2);ctx.arc(x+15,y-8,7,0,Math.PI*2);ctx.fill();ctx.fillStyle='#111827';ctx.beginPath();ctx.arc(x-15,y-7,3,0,Math.PI*2);ctx.arc(x+15,y-7,3,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='900 12px system-ui';ctx.textAlign='center';ctx.fillText(`SHIELD ${Math.max(0,4-state.bossStep)}/4`,x,y+61)}
+function drawParticles(){for(const p of state.particles){ctx.globalAlpha=p.life;ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();p.y-=p.v;p.life-=.025}ctx.globalAlpha=1;state.particles=state.particles.filter(p=>p.life>0)}
+function particles(color='#fff'){for(let i=0;i<16;i++)state.particles.push({x:W*(.2+.6*state.playerX)+(Math.random()-.5)*50,y:H*.8+(Math.random()-.5)*30,r:2+Math.random()*5,v:1+Math.random()*2,life:1,color})}
+function roundRect(c,x,y,w,h,r,fill,stroke){c.beginPath();c.roundRect?c.roundRect(x,y,w,h,r):(c.rect(x,y,w,h));if(fill)c.fill();if(stroke)c.stroke()}
+function wrapText(text,x,y,maxW,lineH){const words=String(text).split(' '),lines=[];let line='';for(const w of words){let test=line?line+' '+w:w;if(ctx.measureText(test).width>maxW&&line){lines.push(line);line=w}else line=test}lines.push(line);lines.slice(0,2).forEach((l,i)=>ctx.fillText(l,x,y+(i-(lines.length-1)/2)*lineH))}
+
+function loop(t){if(!state.running)return;let dt=Math.min(.04,(t-state.lastT)/1000||.016);state.lastT=t;state.roadShift=(state.roadShift+dt*115)%840;state.playerX+=(state.targetX-state.playerX)*Math.min(1,dt*8);updateReadHint(t);
+ if(state.battle){if(state.battle.phase==='approach'){state.battle.y+=dt*H*.23;if(state.battle.y>H*.57)finishEnemyBattle()}}
+ else if(!state.paused&&state.current&&t>=state.readingUntil){if(state.current.kind==='letters')updateLetters(dt);else{state.gateY+=dt*H*.07;if(state.gateY>H*.74){const n=state.current.choices.length;const lane=clamp(Math.floor(state.playerX*n),0,n-1);particles(state.current.choices[lane].ok?'#fff59d':'#fecaca');resolveGate(state.current.choices[lane])}}}
+ draw();requestAnimationFrame(loop)}
+function updateLetters(dt){const col=state.collect;if(!col)return;for(const it of col.items)it.y+=dt*H*.12;const hit=col.items.find(it=>it.y>H*.72);if(hit){const lane=clamp(Math.floor(state.playerX*3),0,2);const same=hit.lane===lane;if(same&&hit.correct){correctSound();particles('#fff59d');col.index++;state.score+=35;state.army+=8;col.items=[];ui.score.textContent=state.score;ui.army.textContent=state.army;if(col.index>=state.current.letters.length){resolveAnswer(true,state.current,1)}}else{if(same&&!hit.correct)wrongSound();col.items=[]}}
+}
+
+let drag=false,startX=0;
+canvas.addEventListener('pointerdown',e=>{drag=true;startX=e.clientX;canvas.setPointerCapture?.(e.pointerId)});
+canvas.addEventListener('pointermove',e=>{if(!drag||state.paused)return;const r=canvas.getBoundingClientRect();state.targetX=clamp((e.clientX-r.left)/r.width,0.04,.96)});
+canvas.addEventListener('pointerup',e=>{if(!drag)return;drag=false;const dx=e.clientX-startX;if(Math.abs(dx)>20)state.targetX=clamp(state.targetX+(dx>0?.08:-.08),.04,.96)});
+ui.audio.onclick=()=>state.current?.audio&&speak(state.current.audio);
+ui.typeAudio.onclick=()=>state.current?.audio&&speak(state.current.audio,0.88);
+ui.typeSubmit.onclick=typeSubmit;
+
+function showModal(html){ui.modalCard.innerHTML=html;ui.modal.classList.remove('hidden');ui.home.classList.add('hidden')}
+function home(){state.running=false;ui.hud.classList.add('hidden');ui.question.classList.add('hidden');ui.audio.classList.add('hidden');ui.feedback.classList.add('hidden');ui.type.classList.add('hidden');ui.modal.classList.add('hidden');ui.home.classList.remove('hidden');}
+function progress(){const weak=weakest(8);showModal(`<h2 style="margin-top:0">📈 Progress</h2><div class="resultRow"><b>Runs started</b><b>${save.attempts}</b></div><div class="resultRow"><b>Questions answered</b><b>${save.totalAnswered}</b></div><div class="resultRow"><b>Accuracy</b><b>${save.totalAnswered?Math.round(save.totalCorrect/save.totalAnswered*100):0}%</b></div>${save.lastTest?`<div class="resultRow"><b>Last dictation test</b><b>${save.lastTest.score}%</b></div>`:''}<h3>Weakest words</h3>${weak.map(v=>`<div class="resultRow"><span>${esc(v.w)}</span><b>${mastery(v.w)}%</b></div>`).join('')}<button class="soft" style="width:100%;margin-top:14px" onclick="window.DR.home()">Back</button>`)}
+function settings(){showModal(`<h2 style="margin-top:0">⚙️ Settings</h2><div class="settingsRow"><b>Background music</b><div class="switch ${save.music?'on':''}" id="musicSwitch"></div></div><div class="settingsRow"><b>Sound effects</b><div class="switch ${save.sfx?'on':''}" id="sfxSwitch"></div></div><p class="tiny">Speech uses your phone/browser's English voice through the Web Speech API.</p><button class="soft" style="width:100%;margin-top:14px" onclick="window.DR.home()">Back</button>`);setTimeout(()=>{$('#musicSwitch').onclick=()=>{save.music=!save.music;persist();$('#musicSwitch').classList.toggle('on',save.music);if(save.music){ensureAudio();startMusic()}else stopMusic()};$('#sfxSwitch').onclick=()=>{save.sfx=!save.sfx;persist();$('#sfxSwitch').classList.toggle('on',save.sfx)}},0)}
+function review(){const arr=weakest(10);let i=0;const render=()=>{const v=arr[i];showModal(`<div class="qType">WEAK WORD ${i+1}/${arr.length}</div><h2>${esc(v.w)}</h2><p style="font-weight:800;color:#475569">${esc(v.meaning)}</p><button class="secondary" style="width:100%" id="reviewSpeak">🔊 Hear it</button><div class="progressBar"><div class="progressFill" style="width:${mastery(v.w)}%"></div></div><div class="smallBtns"><button class="soft" id="reviewPrev">← Prev</button><button class="primary" id="reviewNext">Next →</button><button class="soft" onclick="window.DR.home()">Home</button></div>`);$('#reviewSpeak').onclick=()=>{ensureAudio();speak(v.w)};$('#reviewPrev').onclick=()=>{i=(i-1+arr.length)%arr.length;render()};$('#reviewNext').onclick=()=>{i=(i+1)%arr.length;render()}};render()}
+
+let test={i:0,answers:[],replays:0};
+function startTest(){ensureAudio();test={i:0,answers:[],replays:0};renderTest()}
+function renderTest(){const s=sentences[test.i];showModal(`<div class="qType">DICTATION TEST • ${test.i+1}/6</div><h2>Listen and type the sentence.</h2><p class="tiny">First replay is free. A third replay only affects the bonus, not spelling accuracy.</p><button class="secondary" style="width:100%;margin-bottom:10px" id="testSpeak">🔊 Play sentence</button><textarea id="testInput" style="width:100%;min-height:130px;border:2px solid #d7dcf5;border-radius:14px;padding:12px;font-size:17px" spellcheck="false"></textarea><button class="primary" style="width:100%;margin-top:10px" id="testNext">${test.i===5?'Finish test':'Next sentence'}</button>`);let plays=0;const play=()=>{plays++;speak(s.text,plays>=2?.86:.96)};$('#testSpeak').onclick=play;$('#testNext').onclick=()=>{const v=$('#testInput').value.trim();if(!v)return;test.answers.push(v);if(test.i===5)finishTest();else{test.i++;renderTest();setTimeout(()=>speak(sentences[test.i].text),150)}};setTimeout(()=>speak(s.text),250)}
+function finishTest(){let sum=0,rows='';sentences.forEach((s,i)=>{const sim=wordSimilarity(norm(test.answers[i]),norm(s.text));sum+=sim;rows+=`<div style="padding:10px 0;border-bottom:1px solid #edf0f6"><b>${i+1}. ${Math.round(sim*100)}%</b><div class="tiny">Target: ${esc(s.text)}</div><div class="tiny">Typed: ${esc(test.answers[i])}</div></div>`});const score=Math.round(sum/sentences.length*100);save.lastTest={score,date:new Date().toISOString()};persist();showModal(`<h2 style="margin-top:0">🎧 Dictation Result: ${score}%</h2>${rows}<h3>Weak words</h3><div>${weakest(3).map(v=>`<span class="tag">${esc(v.w)}</span>`).join('')}</div><button class="primary" style="width:100%;margin-top:14px" onclick="window.DR.startTest()">Try again</button><button class="soft" style="width:100%;margin-top:8px" onclick="window.DR.home()">Home</button>`)}
+
+const startBtn=$('#startRunBtn');
+startBtn.addEventListener('click',safeStartRun);
+$('#testModeBtn').addEventListener('click',startTest);$('#reviewBtn').addEventListener('click',review);$('#progressBtn').addEventListener('click',progress);$('#settingsBtn').addEventListener('click',settings);
+window.startRunSafe=safeStartRun;
+const engineStatus=$('#engineStatus'); if(engineStatus){engineStatus.textContent='✓ Game engine ready';engineStatus.style.color='#166534';}
+
+// Boss hook: wrap resolveAnswer so boss progresses through 4 shields rather than normal stages.
+const _resolve=resolveAnswer;
+resolveAnswer=function(ok,q,similarity=0,typed='',choice=null){
+ if(!state.boss)return _resolve(ok,q,similarity,typed,choice);
+ state.paused=true;save.totalAnswered++;if(ok)save.totalCorrect++;bump(q.word,ok);persist();
+ if(ok){correctSound();state.score+=200;state.army+=30;ui.army.textContent=state.army;ui.power.textContent=state.army;particles('#fde68a');showFeedback(true,'Boss shield broken!',`Shield ${state.bossStep+1} destroyed.`,`Mastery: ${mastery(q.word)}%`)}else{wrongSound();state.army=Math.max(5,Math.round(state.army*.75));ui.army.textContent=state.army;ui.power.textContent=state.army;const ans=q.answer||q.choices?.find(c=>c.ok)?.t||q.word;showFeedback(false,'Boss blocked it',`You can still continue.`,`Correct answer: ${ans}`)}
+ const old=ui.fbContinue.onclick;ui.fbContinue.onclick=()=>{ui.feedback.classList.add('hidden');state.bossStep++;if(state.bossStep>=state.bossQuestions.length){ui.fbContinue.onclick=old;state.boss=false;endRun();return}state.current=state.bossQuestions[state.bossStep];renderQuestionUI();setReadingWindow(state.current);state.gateY=H*.18;state.paused=false;if(state.current.kind.startsWith('type')){state.paused=true;openType(state.current)}};
+};
+
+window.DR={startRun:safeStartRun,home,startTest,progress,settings,review,
+ __debug:{
+   getState:()=>({running:state.running,stage:state.stage,boss:state.boss,bossStep:state.bossStep,currentKind:state.current&&state.current.kind,currentWord:state.current&&state.current.word,army:state.army,score:state.score,battle:state.battle&&state.battle.tier,blockedEnemy:state.blockedEnemy&&state.blockedEnemy.hp,kills:state.kills,readingMs:Math.max(0,state.readingUntil-performance.now())}),
+   answerCurrentCorrect:()=>{const q=state.current;if(!q)throw new Error('No current question');if(q.choices){const c=q.choices.find(x=>x.ok);resolveGate(c)}else{resolveAnswer(true,q,1,q.answer||q.word||'')};return true},
+   continueFeedback:()=>{if(typeof ui.fbContinue.onclick==='function')ui.fbContinue.onclick();return true},
+   finishBattleNow:()=>{if(state.battle&&state.battle.phase==='approach'){state.battle.y=H*.58;finishEnemyBattle();return true}return false},
+   setArmy:n=>{state.army=Math.max(1,Math.round(Number(n)||1));ui.army.textContent=state.army;ui.power.textContent=state.army;return state.army},
+   forceReadingDone:()=>{state.readingUntil=0;return true},
+   selfTestResult:()=>document.querySelector('#self-test')&&document.querySelector('#self-test').dataset.result
+ }
+};
+
+// Small built-in self-test: pure logic checks visible in dumped DOM for automated verification.
+const tests=[];function selfTest(name,fn){try{tests.push([name,!!fn()])}catch(e){tests.push([name,false,String(e)])}}
+selfTest('six dictation sentences',()=>sentences.length===6);
+selfTest('run has sixteen stages',()=>buildRun().length===16);
+selfTest('normalizer punctuation',()=>norm('Hello, World!')==='hello world');
+selfTest('mastery clamp',()=>clamp(120,0,100)===100);
+selfTest('boss has four shields',()=>buildBoss().length===4);
+selfTest('reading window gives kids time',()=>readingMs({kind:'meaning',prompt:'What does wonderful mean?'})>=4000);
+selfTest('checkpoint enemy scales up',()=>{const old=state.stage;state.stage=15;const e=enemySpec();state.stage=old;return e.checkpoint&&e.hp>=20000});
+selfTest('every sentence has focus words',()=>sentences.every(s=>s.focus.length>=3));
+selfTest('full run answer paths are valid',()=>{const r=buildRun();return r.every(q=>q && q.kind && q.word && ((q.choices&&q.choices.some(c=>c.ok))||q.kind==='letters'||q.answer));});
+selfTest('boss answer paths are valid',()=>buildBoss().every(q=>q && ((q.choices&&q.choices.some(c=>c.ok))||q.answer)));
+selfTest('six full dictation answers normalize',()=>sentences.every(s=>norm(s.text).length>10));
+const marker=document.createElement('meta');marker.id='self-test';marker.dataset.result=tests.every(t=>t[1])?'PASS':'FAIL';marker.dataset.detail=tests.map(t=>`${t[0]}:${t[1]?'ok':'bad'}`).join('|');document.head.appendChild(marker);
+})();
+</script>
+</body>
+</html>
