@@ -177,9 +177,9 @@ function stopMusic(){clearInterval(musicTimer);musicTimer=null}
 function speak(text,rate=0.95){try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang='en-GB';u.rate=rate;u.pitch=1.03;speechSynthesis.speak(u)}catch(e){}}
 
 const ui={hud:$('#hud'),question:$('#questionBox'),qType:$('#qType'),qText:$('#qText'),qHint:$('#qHint'),audio:$('#audioBtn'),army:$('#armyNum'),score:$('#scoreNum'),power:$('#powerNum'),stage:$('#stageNum'),home:$('#homeScreen'),modal:$('#modalScreen'),modalCard:$('#modalCard'),feedback:$('#feedback'),fbTitle:$('#fbTitle'),fbText:$('#fbText'),fbTeach:$('#fbTeach'),fbContinue:$('#fbContinue'),type:$('#typeOverlay'),typeLabel:$('#typeLabel'),typePrompt:$('#typePrompt'),typeHint:$('#typeHint'),typeInput:$('#typeInput'),typeAudio:$('#typeAudio'),typeSubmit:$('#typeSubmit')};
-let state={mode:'home',running:false,army:10,score:0,stage:0,totalStages:16,questions:[],current:null,gateY:-100,playerX:0.5,targetX:0.5,lastT:0,paused:false,pendingRetry:[],boss:false,bossStep:0,bossQuestions:[],zone:0,particles:[],roadShift:0,collect:null,readingUntil:0,battle:null,blockedEnemy:null,kills:0};
+let state={mode:'home',running:false,army:10,score:0,stage:0,totalStages:16,questions:[],current:null,gateY:-100,playerX:0.5,targetX:0.5,lastT:0,paused:false,pendingRetry:[],boss:false,bossStep:0,bossQuestions:[],zone:0,particles:[],roadShift:0,collect:null,readingUntil:0,battle:null,blockedEnemy:null,kills:0,smallEnemies:[],shots:[],enemySpawnClock:0,shotClock:0,combo:0,maxCombo:0,powerup:null};
 
-function makeMeaningQuestion(item){const choices=shuffle([{t:item.meaning,ok:true,m:Math.random()<.25?5:10},...item.wrong.slice(0,2).map(x=>({t:x,ok:false,m:Math.random()<.5?20:50}))]);return {kind:'meaning',type:'MEANING GATE',prompt:`What does “${item.w}” mean?`,choices,word:item.w,audio:item.w};}
+function makeMeaningQuestion(item){const wrong=shuffle(item.wrong)[0]||'not this';const choices=shuffle([{t:item.meaning,ok:true,m:Math.random()<.25?5:10},{t:wrong,ok:false,m:Math.random()<.5?20:50}]);return {kind:'meaning',type:'MEANING GATE',prompt:`What does “${item.w}” mean?`,choices,word:item.w,audio:item.w};}
 function makeSpellingChoice(item){const bad=misspell[item.w]||item.w.replace(/[aeiou]/i,'');const choices=shuffle([{t:item.w,ok:true,m:5},{t:bad,ok:false,m:50}]);return {kind:'spellingChoice',type:'SPELLING GATE',prompt:'Choose the correct spelling',choices,word:item.w,audio:item.w};}
 function makeFillQuestion(s){let focus=shuffle(s.focus)[0];let re=new RegExp(focus.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i');let prompt=s.text.replace(re,'_____');let distract=(focus==='usually'?'usual':focus==='sometimes'?'always':focus==='favourite'?'favour':focus==='always'?'sometimes':focus==='enjoy'?'enjoys':focus==='at the end of'?'at the start of':(misspell[focus]||'not this'));
  return {kind:'fill',type:'SENTENCE GATE',prompt,choices:shuffle([{t:focus,ok:true,m:5},{t:distract,ok:false,m:20}]),word:focus,audio:s.text};}
@@ -204,7 +204,7 @@ function startRun(){
  const runQuestions=buildRun(), bossQuestions=buildBoss();
  if(runQuestions.length!==16) throw new Error('Run question bank did not build correctly.');
  if(bossQuestions.length!==4) throw new Error('Boss question bank did not build correctly.');
- state={...state,mode:'run',running:true,army:10,score:0,stage:0,totalStages:16,questions:runQuestions,current:null,gateY:-120,playerX:.5,targetX:.5,paused:false,pendingRetry:[],boss:false,bossStep:0,bossQuestions:bossQuestions,zone:0,collect:null,readingUntil:0,battle:null,blockedEnemy:null,kills:0,lastT:performance.now()};
+ state={...state,mode:'run',running:true,army:10,score:0,stage:0,totalStages:16,questions:runQuestions,current:null,gateY:-120,playerX:.5,targetX:.5,paused:false,pendingRetry:[],boss:false,bossStep:0,bossQuestions:bossQuestions,zone:0,collect:null,readingUntil:0,battle:null,blockedEnemy:null,kills:0,smallEnemies:[],shots:[],enemySpawnClock:0,shotClock:0,combo:0,maxCombo:0,powerup:null,lastT:performance.now()};
  save.attempts++;persist();nextQuestion();requestAnimationFrame(loop);
 }
 function safeStartRun(){
@@ -232,10 +232,26 @@ function wordSimilarity(a,b){const A=a.split(' '),B=b.split(' ');let hit=0;A.for
 function resolveGate(choice){if(!state.current||state.paused)return;resolveAnswer(!!choice.ok,state.current,choice.ok?1:0,'',choice)}
 function resolveAnswer(ok,q,similarity=0,typed='',choice=null){
  state.paused=true;save.totalAnswered++;if(ok)save.totalCorrect++;bump(q.word,ok);
- if(ok){const mult=choice?.m||1;state.army=clamp(Math.round(state.army*(q.kind==='meaning'||q.kind==='fill'||q.kind==='spellingChoice'?mult:1)+10),1,99999);state.score+=Math.round(100+(similarity||1)*100);correctSound();showFeedback(true,'Correct!',choice?`Great choice • ×${mult}`:'Nice work!',`Mastery: ${mastery(q.word)}%`)}
- else {state.army=Math.max(5,Math.round(state.army*.65));state.score=Math.max(0,state.score-20);wrongSound();state.pendingRetry.push(retryVariant(q));const answer=q.answer||q.choices?.find(c=>c.ok)?.t||q.word;showFeedback(false,'Try again soon',`Your army lost a few helpers.`,`${answer}${typed?`\nYou typed: ${typed}`:''}`)}
+ if(ok){
+   state.combo++;state.maxCombo=Math.max(state.maxCombo,state.combo);
+   const mult=choice?.m||1;
+   state.army=clamp(Math.round(state.army*(q.kind==='meaning'||q.kind==='fill'||q.kind==='spellingChoice'?mult:1)+10),1,99999);
+   state.score+=Math.round(100+(similarity||1)*100)+state.combo*10;
+   const reward=grantPowerup();
+   correctSound();showFeedback(true,state.combo>1?`Correct! 🔥 ×${state.combo} combo`:'Correct!',choice?`Great choice • ×${mult}${reward?' • '+reward:''}`:`Nice work!${reward?' • '+reward:''}`,`Mastery: ${mastery(q.word)}%`);
+ }
+ else {
+   state.combo=0;state.army=Math.max(5,Math.round(state.army*.65));state.score=Math.max(0,state.score-20);wrongSound();state.pendingRetry.push(retryVariant(q));const answer=q.answer||q.choices?.find(c=>c.ok)?.t||q.word;showFeedback(false,'Try again soon',`Combo reset • keep going!`,`${answer}${typed?`\nYou typed: ${typed}`:''}`);
+ }
  persist();ui.army.textContent=state.army;ui.score.textContent=state.score;ui.power.textContent=state.army;
 }
+function grantPowerup(){
+ if(state.combo<2)return '';
+ const r=Math.random();
+ if(r<.34){const add=10+Math.min(40,state.combo*5);state.army+=add;return `Rescue +${add} soldiers`}
+ if(r<.67){state.powerup={type:'rapid',until:performance.now()+5000};return 'Rapid Fire 5s'}
+ state.powerup={type:'shield',until:performance.now()+5000};return 'Shield 5s'}
+function powerupActive(type,now=performance.now()){return state.powerup&&state.powerup.type===type&&state.powerup.until>now}
 function retryVariant(q){const it=vocab.find(v=>v.w===q.word);if(it&&q.kind!=='meaning')return makeMeaningQuestion(it);if(it)return makeSpellingChoice(it);return q}
 function showFeedback(ok,title,text,teach){ui.fbTitle.textContent=ok?'✅ '+title:'💡 '+title;ui.fbText.textContent=text;ui.fbTeach.textContent=teach||'';ui.fbTeach.classList.toggle('hidden',!teach);ui.feedback.classList.remove('hidden')}
 ui.fbContinue.onclick=()=>{ui.feedback.classList.add('hidden');beginEnemyBattle()};
@@ -271,7 +287,7 @@ function startBoss(){state.boss=true;state.bossStep=0;state.paused=false;state.c
 function bossAdvance(ok){/* reserved */}
 
 function endRun(){state.running=false;ui.hud.classList.add('hidden');ui.question.classList.add('hidden');ui.audio.classList.add('hidden');showRunResults()}
-function showRunResults(){const acc=save.totalAnswered?Math.round(save.totalCorrect/save.totalAnswered*100):0;showModal(`<h2 style="margin-top:0">🏆 Run Complete</h2><div class="resultRow"><b>Army</b><b>${state.army.toLocaleString()}</b></div><div class="resultRow"><b>Score</b><b>${state.score}</b></div><div class="resultRow"><b>Enemies defeated</b><b>${state.kills}</b></div><div class="resultRow"><b>Overall accuracy</b><b>${acc}%</b></div><h3>Review these next</h3><div>${weakest(3).map(v=>`<span class="tag">${esc(v.w)} ${mastery(v.w)}%</span>`).join('')}</div><div class="menuGrid" style="margin-top:16px"><button class="primary" onclick="window.DR.startRun()">Play again</button><button class="soft" onclick="window.DR.home()">Home</button></div>`)}
+function showRunResults(){const acc=save.totalAnswered?Math.round(save.totalCorrect/save.totalAnswered*100):0;showModal(`<h2 style="margin-top:0">🏆 Run Complete</h2><div class="resultRow"><b>Army</b><b>${state.army.toLocaleString()}</b></div><div class="resultRow"><b>Score</b><b>${state.score}</b></div><div class="resultRow"><b>Enemies defeated</b><b>${state.kills}</b></div><div class="resultRow"><b>Best combo</b><b>×${state.maxCombo}</b></div><div class="resultRow"><b>Overall accuracy</b><b>${acc}%</b></div><h3>Review these next</h3><div>${weakest(3).map(v=>`<span class="tag">${esc(v.w)} ${mastery(v.w)}%</span>`).join('')}</div><div class="menuGrid" style="margin-top:16px"><button class="primary" onclick="window.DR.startRun()">Play again</button><button class="soft" onclick="window.DR.home()">Home</button></div>`)}
 
 function zoneColors(z){return [['#85d8ff','#bdefff','#a4dc73','#65ba56'],['#8ed8ff','#c8f2ff','#78c8e8','#4fa1d7'],['#b39cff','#e0c6ff','#b178d5','#7852bd'],['#ffb86f','#ffe0a3','#df7c48','#a44e39']][z]}
 function draw(){ctx.clearRect(0,0,W,H);const c=zoneColors(state.zone);let g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,c[0]);g.addColorStop(.38,c[1]);g.addColorStop(.39,c[2]);g.addColorStop(1,c[3]);ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
@@ -284,15 +300,69 @@ function draw(){ctx.clearRect(0,0,W,H);const c=zoneColors(state.zone);let g=ctx.
  ctx.strokeStyle='#cbd5e188';for(let i=0;i<12;i++){let yy=((i*70+state.roadShift)%840);let p=yy/H,ww=topW+(bottomW-topW)*p;ctx.beginPath();ctx.moveTo(cx-ww/2,yy);ctx.lineTo(cx+ww/2,yy);ctx.stroke()}
  if(state.current && !state.paused && !state.battle){if(state.current.kind==='letters')drawLetters(); else drawGates()}
  if(state.battle)drawEnemyBattle();
- drawCrowd();drawParticles();if(state.boss)drawBoss();
+ drawSmallEnemies();drawCrowd();drawParticles();if(state.boss)drawBoss();
 }
 function laneCenter(i,n,y){const p=clamp((y-H*.25)/(H*.78),0,1),rw=(W*.38)+(W*.94-W*.38)*p,left=W/2-rw/2;return left+rw*(i+.5)/n}
-function drawGates(){const q=state.current,n=q.choices.length,y=state.gateY;const p=clamp((y-H*.25)/(H*.78),0,1),gateW=(W*.33)+(W*.02*p),gateH=68+28*p;for(let i=0;i<n;i++){const ch=q.choices[i],x=laneCenter(i,n,y);ctx.fillStyle=ch.ok?'#5f75ff':'#38bdf8';ctx.strokeStyle='#ffffff';ctx.lineWidth=4;roundRect(ctx,x-gateW/2,y-gateH/2,gateW,gateH,14,true,true);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`900 ${clamp(13+5*p,13,18)}px system-ui`;wrapText(ch.t,x,y-8,gateW-10,18);ctx.font=`1000 ${clamp(16+7*p,16,23)}px system-ui`;ctx.fillText('×'+ch.m,x,y+gateH*.27)} }
-function setupLetterItems(){const col=state.collect,q=state.current;if(!col)return;if(col.items.length<3 && col.index<q.letters.length){while(col.items.length<3){const correct=q.letters[col.index];const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ';let fake=alphabet[Math.floor(Math.random()*alphabet.length)];if(fake===correct)fake='X';const lane=Math.floor(Math.random()*3);const isCorrect=col.items.length===0;col.items.push({char:isCorrect?correct:fake,lane:(lane+col.items.length)%3,y:H*.2-col.items.length*55,correct:isCorrect});}}}
-function drawLetters(){setupLetterItems();const col=state.collect;if(!col)return;for(const it of col.items){const x=laneCenter(it.lane,3,it.y);ctx.save();ctx.translate(x,it.y);const s=1+.08*Math.sin(performance.now()/180+it.y);ctx.scale(s,s);ctx.fillStyle='#fff';ctx.shadowColor='#4f46e5';ctx.shadowBlur=14;ctx.beginPath();ctx.arc(0,0,27,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='#4f46e5';ctx.font='1000 28px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(it.char,0,1);ctx.restore()}}
+function drawGates(){const q=state.current,n=Math.min(2,q.choices.length),y=state.gateY;const p=clamp((y-H*.22)/(H*.78),0,1),gateW=W*.43,gateH=82+24*p;for(let i=0;i<n;i++){const ch=q.choices[i],x=laneCenter(i,n,y);ctx.fillStyle=i===0?'#4f8cff':'#8b5cf6';ctx.strokeStyle='#ffffff';ctx.lineWidth=4;roundRect(ctx,x-gateW/2,y-gateH/2,gateW,gateH,16,true,true);ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`900 ${clamp(15+5*p,15,20)}px system-ui`;wrapText(ch.t,x,y-10,gateW-14,20);ctx.font=`1000 ${clamp(17+7*p,17,24)}px system-ui`;ctx.fillText('×'+ch.m,x,y+gateH*.3)} }
+function setupLetterItems(){const col=state.collect,q=state.current;if(!col)return;if(col.items.length<2 && col.index<q.letters.length){while(col.items.length<2){const correct=q.letters[col.index];const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZ';let fake=alphabet[Math.floor(Math.random()*alphabet.length)];if(fake===correct)fake='X';const lane=Math.floor(Math.random()*2);const isCorrect=col.items.length===0;col.items.push({char:isCorrect?correct:fake,lane:(lane+col.items.length)%2,y:H*.2-col.items.length*55,correct:isCorrect});}}}
+function drawLetters(){setupLetterItems();const col=state.collect;if(!col)return;for(const it of col.items){const x=laneCenter(it.lane,2,it.y);ctx.save();ctx.translate(x,it.y);const s=1+.08*Math.sin(performance.now()/180+it.y);ctx.scale(s,s);ctx.fillStyle='#fff';ctx.shadowColor='#4f46e5';ctx.shadowBlur=14;ctx.beginPath();ctx.arc(0,0,27,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='#4f46e5';ctx.font='1000 28px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(it.char,0,1);ctx.restore()}}
 function drawEnemyBattle(){const b=state.battle;if(!b)return;const x=W/2,y=b.y;ctx.save();const scale=b.tier==='SMALL'?.72:b.tier==='MID'?1:b.tier==='LARGE'?1.28:1.55;ctx.translate(x,y);ctx.scale(scale,scale);ctx.fillStyle=b.phase==='defeated'?'#94a3b8':b.tier==='SMALL'?'#ef4444':b.tier==='MID'?'#f97316':b.tier==='LARGE'?'#7c3aed':'#3f1d68';ctx.beginPath();ctx.arc(0,0,34,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-12,-7,6,0,Math.PI*2);ctx.arc(12,-7,6,0,Math.PI*2);ctx.fill();ctx.fillStyle='#111827';ctx.beginPath();ctx.arc(-12,-6,2.8,0,Math.PI*2);ctx.arc(12,-6,2.8,0,Math.PI*2);ctx.fill();ctx.restore();
  const bw=Math.min(W*.55,220),bx=(W-bw)/2,by=y+48;ctx.fillStyle='#ffffffdd';roundRect(ctx,bx-4,by-4,bw+8,28,14,true,false);ctx.fillStyle='#e5e7eb';roundRect(ctx,bx,by,bw,20,10,true,false);ctx.fillStyle=b.phase==='blocked'?'#dc2626':'#ef4444';roundRect(ctx,bx,by,bw*clamp(b.hp/b.maxHp,0,1),20,10,true,false);ctx.fillStyle='#111827';ctx.font='900 12px system-ui';ctx.textAlign='center';ctx.fillText(`${b.tier} ENEMY • ${Math.ceil(b.hp)} power`,W/2,by+14);
  if(b.phase==='approach'){ctx.fillStyle='#fff';ctx.font='1000 20px system-ui';ctx.fillText('⚔️ ENEMY WAVE!',W/2,y-62)}else if(b.phase==='defeated'){ctx.fillStyle='#166534';ctx.font='1000 22px system-ui';ctx.fillText('DEFEATED! 💥',W/2,y-62)}else if(b.phase==='blocked'){ctx.fillStyle='#991b1b';ctx.font='1000 18px system-ui';ctx.fillText('TOO STRONG — LEARN & POWER UP!',W/2,y-62)}}
+function spawnSmallEnemy(now){
+ const progress=clamp((state.stage+(state.boss?state.bossStep:0))/20,0,1);
+ const weak=weakest(3);const tagged=Math.random()<.28&&weak.length?weak[Math.floor(Math.random()*weak.length)].w:'';
+ const hp=Math.ceil(3+progress*10+Math.random()*4);
+ state.smallEnemies.push({x:.16+Math.random()*.68,y:H*.19,hp,maxHp:hp,damage:1+Math.floor(progress*7),speed:.045+progress*.035+Math.random()*.018,word:tagged,wiggle:Math.random()*6.28});
+}
+function updateSmallEnemies(dt,now){
+ if(!state.running||state.mode!=='run')return;
+ const reading=state.current&&now<state.readingUntil;
+ const slow=reading?.2:1;
+ const stagePressure=1+Math.min(1,state.stage/16);
+ const interval=Math.max(.85,2.35-state.stage*.07);
+ state.enemySpawnClock+=dt;
+ if(!state.paused&&state.enemySpawnClock>interval){state.enemySpawnClock=0;spawnSmallEnemy(now)}
+ if(state.powerup&&state.powerup.until<=now)state.powerup=null;
+ for(const e of state.smallEnemies){e.y+=dt*H*e.speed*slow*stagePressure;e.wiggle+=dt*3}
+ state.shotClock+=dt;
+ const rapid=powerupActive('rapid',now),fireEvery=rapid?.09:.22;
+ if(state.shotClock>=fireEvery&&state.smallEnemies.length){
+   state.shotClock=0;
+   let target=state.smallEnemies.reduce((a,b)=>!a||b.y>a.y?b:a,null);
+   if(target&&target.y>H*.22){
+     const px=W*(.18+.64*state.playerX),py=H*.78;
+     state.shots.push({x:px,y:py,tx:W*target.x,ty:target.y,life:.22,target});
+     const dmg=Math.max(1,Math.floor(1+Math.log10(Math.max(10,state.army))*1.6)+(rapid?2:0)+Math.floor(state.combo/3));
+     target.hp-=dmg;
+   }
+ }
+ for(const sh of state.shots){sh.life-=dt;sh.x+=(sh.tx-sh.x)*Math.min(1,dt*14);sh.y+=(sh.ty-sh.y)*Math.min(1,dt*14)}
+ state.shots=state.shots.filter(sh=>sh.life>0);
+ const alive=[];
+ for(const e of state.smallEnemies){
+   if(e.hp<=0){state.kills++;state.score+=12;continue}
+   if(e.y>H*.73){
+     let loss=e.damage;if(powerupActive('shield',now))loss=Math.max(0,Math.floor(loss/2));
+     state.army=Math.max(1,state.army-loss);wrongSound();continue
+   }
+   alive.push(e);
+ }
+ state.smallEnemies=alive;
+ ui.army.textContent=state.army;ui.power.textContent=state.army;ui.score.textContent=state.score;
+}
+function drawSmallEnemies(){
+ for(const e of state.smallEnemies){
+   const x=W*e.x+Math.sin(e.wiggle)*4,y=e.y,scale=.65+clamp((y-H*.18)/(H*.6),0,1)*.55;
+   ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
+   ctx.fillStyle=e.word?'#db2777':'#ef4444';ctx.beginPath();ctx.arc(0,0,15,0,Math.PI*2);ctx.fill();
+   ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(-5,-3,3,0,Math.PI*2);ctx.arc(5,-3,3,0,Math.PI*2);ctx.fill();
+   ctx.fillStyle='#111827';ctx.beginPath();ctx.arc(-5,-3,1.4,0,Math.PI*2);ctx.arc(5,-3,1.4,0,Math.PI*2);ctx.fill();ctx.restore();
+   const bw=30;ctx.fillStyle='#ffffffaa';ctx.fillRect(x-bw/2,y+17,bw,4);ctx.fillStyle='#ef4444';ctx.fillRect(x-bw/2,y+17,bw*clamp(e.hp/e.maxHp,0,1),4);
+   if(e.word){ctx.fillStyle='#7c2d12';ctx.font='800 9px system-ui';ctx.textAlign='center';ctx.fillText(e.word,x,y-20)}
+ }
+ for(const sh of state.shots){ctx.strokeStyle='#60a5fa';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(sh.x,sh.y);ctx.lineTo(sh.x+(sh.tx-sh.x)*.3,sh.y+(sh.ty-sh.y)*.3);ctx.stroke()}
+}
 function drawCrowd(){const px=W*(.18+.64*state.playerX),py=H*.79;const count=clamp(Math.floor(Math.log10(Math.max(10,state.army))*10),12,34);for(let i=count-1;i>=0;i--){const row=Math.floor(i/7),col=i%7,offset=(col-3)*9+(row%2?4:0);ctx.fillStyle=i===0?'#ffdd55':'#4569f7';ctx.beginPath();ctx.arc(px+offset,py+row*7,6,0,Math.PI*2);ctx.fill();ctx.fillStyle='#163ea8';ctx.fillRect(px+offset-4,py+row*7+4,8,7)}ctx.fillStyle='#fff';ctx.strokeStyle='#334155';ctx.lineWidth=2;roundRect(ctx,px-34,py+42,68,24,12,true,true);ctx.fillStyle='#1f2937';ctx.font='900 13px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(state.army.toLocaleString(),px,py+54)}
 function drawBoss(){const x=W/2,y=H*.24;ctx.fillStyle='#772e8f';ctx.beginPath();ctx.arc(x,y,44,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(x-15,y-8,7,0,Math.PI*2);ctx.arc(x+15,y-8,7,0,Math.PI*2);ctx.fill();ctx.fillStyle='#111827';ctx.beginPath();ctx.arc(x-15,y-7,3,0,Math.PI*2);ctx.arc(x+15,y-7,3,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';ctx.font='900 12px system-ui';ctx.textAlign='center';ctx.fillText(`SHIELD ${Math.max(0,4-state.bossStep)}/4`,x,y+61)}
 function drawParticles(){for(const p of state.particles){ctx.globalAlpha=p.life;ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();p.y-=p.v;p.life-=.025}ctx.globalAlpha=1;state.particles=state.particles.filter(p=>p.life>0)}
@@ -301,10 +371,11 @@ function roundRect(c,x,y,w,h,r,fill,stroke){c.beginPath();c.roundRect?c.roundRec
 function wrapText(text,x,y,maxW,lineH){const words=String(text).split(' '),lines=[];let line='';for(const w of words){let test=line?line+' '+w:w;if(ctx.measureText(test).width>maxW&&line){lines.push(line);line=w}else line=test}lines.push(line);lines.slice(0,2).forEach((l,i)=>ctx.fillText(l,x,y+(i-(lines.length-1)/2)*lineH))}
 
 function loop(t){if(!state.running)return;let dt=Math.min(.04,(t-state.lastT)/1000||.016);state.lastT=t;state.roadShift=(state.roadShift+dt*115)%840;state.playerX+=(state.targetX-state.playerX)*Math.min(1,dt*8);updateReadHint(t);
- if(state.battle){if(state.battle.phase==='approach'){state.battle.y+=dt*H*.23;if(state.battle.y>H*.57)finishEnemyBattle()}}
- else if(!state.paused&&state.current&&t>=state.readingUntil){if(state.current.kind==='letters')updateLetters(dt);else{state.gateY+=dt*H*.07;if(state.gateY>H*.74){const n=state.current.choices.length;const lane=clamp(Math.floor(state.playerX*n),0,n-1);particles(state.current.choices[lane].ok?'#fff59d':'#fecaca');resolveGate(state.current.choices[lane])}}}
+ updateSmallEnemies(dt,t);
+ if(state.battle){if(state.battle.phase==='approach'){state.battle.y+=dt*H*.18;if(state.battle.y>H*.57)finishEnemyBattle()}}
+ else if(!state.paused&&state.current&&t>=state.readingUntil){if(state.current.kind==='letters')updateLetters(dt);else{state.gateY+=dt*H*.055;if(state.gateY>H*.74){const n=Math.min(2,state.current.choices.length);const lane=clamp(Math.floor(state.playerX*n),0,n-1);particles(state.current.choices[lane].ok?'#fff59d':'#fecaca');resolveGate(state.current.choices[lane])}}}
  draw();requestAnimationFrame(loop)}
-function updateLetters(dt){const col=state.collect;if(!col)return;for(const it of col.items)it.y+=dt*H*.12;const hit=col.items.find(it=>it.y>H*.72);if(hit){const lane=clamp(Math.floor(state.playerX*3),0,2);const same=hit.lane===lane;if(same&&hit.correct){correctSound();particles('#fff59d');col.index++;state.score+=35;state.army+=8;col.items=[];ui.score.textContent=state.score;ui.army.textContent=state.army;if(col.index>=state.current.letters.length){resolveAnswer(true,state.current,1)}}else{if(same&&!hit.correct)wrongSound();col.items=[]}}
+function updateLetters(dt){const col=state.collect;if(!col)return;for(const it of col.items)it.y+=dt*H*.12;const hit=col.items.find(it=>it.y>H*.72);if(hit){const lane=clamp(Math.floor(state.playerX*2),0,1);const same=hit.lane===lane;if(same&&hit.correct){correctSound();particles('#fff59d');col.index++;state.score+=35;state.army+=8;col.items=[];ui.score.textContent=state.score;ui.army.textContent=state.army;if(col.index>=state.current.letters.length){resolveAnswer(true,state.current,1)}}else{if(same&&!hit.correct)wrongSound();col.items=[]}}
 }
 
 let drag=false,startX=0;
@@ -343,7 +414,7 @@ resolveAnswer=function(ok,q,similarity=0,typed='',choice=null){
 
 window.DR={startRun:safeStartRun,home,startTest,progress,settings,review,
  __debug:{
-   getState:()=>({running:state.running,stage:state.stage,boss:state.boss,bossStep:state.bossStep,currentKind:state.current&&state.current.kind,currentWord:state.current&&state.current.word,army:state.army,score:state.score,battle:state.battle&&state.battle.tier,blockedEnemy:state.blockedEnemy&&state.blockedEnemy.hp,kills:state.kills,readingMs:Math.max(0,state.readingUntil-performance.now())}),
+   getState:()=>({running:state.running,stage:state.stage,boss:state.boss,bossStep:state.bossStep,currentKind:state.current&&state.current.kind,currentWord:state.current&&state.current.word,army:state.army,score:state.score,battle:state.battle&&state.battle.tier,blockedEnemy:state.blockedEnemy&&state.blockedEnemy.hp,kills:state.kills,smallEnemies:state.smallEnemies.length,combo:state.combo,maxCombo:state.maxCombo,powerup:state.powerup&&state.powerup.type,readingMs:Math.max(0,state.readingUntil-performance.now())}),
    answerCurrentCorrect:()=>{const q=state.current;if(!q)throw new Error('No current question');if(q.choices){const c=q.choices.find(x=>x.ok);resolveGate(c)}else{resolveAnswer(true,q,1,q.answer||q.word||'')};return true},
    continueFeedback:()=>{if(typeof ui.fbContinue.onclick==='function')ui.fbContinue.onclick();return true},
    finishBattleNow:()=>{if(state.battle&&state.battle.phase==='approach'){state.battle.y=H*.58;finishEnemyBattle();return true}return false},
@@ -362,6 +433,8 @@ selfTest('mastery clamp',()=>clamp(120,0,100)===100);
 selfTest('boss has four shields',()=>buildBoss().length===4);
 selfTest('reading window gives kids time',()=>readingMs({kind:'meaning',prompt:'What does wonderful mean?'})>=4000);
 selfTest('checkpoint enemy scales up',()=>{const old=state.stage;state.stage=15;const e=enemySpec();state.stage=old;return e.checkpoint&&e.hp>=20000});
+selfTest('every multiple-choice gate has only two choices',()=>{const sample=[makeMeaningQuestion(vocab[0]),makeSpellingChoice(vocab[1]),makeFillQuestion(sentences[0])];return sample.every(q=>q.choices.length===2)});
+selfTest('small enemy difficulty grows',()=>{const old=state.stage;state.stage=0;const a=1+Math.floor(clamp(state.stage/16,0,1)*7);state.stage=15;const b=1+Math.floor(clamp(state.stage/16,0,1)*7);state.stage=old;return b>a});
 selfTest('every sentence has focus words',()=>sentences.every(s=>s.focus.length>=3));
 selfTest('full run answer paths are valid',()=>{const r=buildRun();return r.every(q=>q && q.kind && q.word && ((q.choices&&q.choices.some(c=>c.ok))||q.kind==='letters'||q.answer));});
 selfTest('boss answer paths are valid',()=>buildBoss().every(q=>q && ((q.choices&&q.choices.some(c=>c.ok))||q.answer)));
