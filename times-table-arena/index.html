@@ -1,64 +1,99 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
-<meta name="theme-color" content="#151833" />
-<title>Times Table Battle Arena</title>
-<link rel="stylesheet" href="style.css" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#13264b">
+<title>Times Table Battle Arena V2</title>
+<link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
 </head>
 <body>
-<div class="app" id="app">
+<div id="app" class="app">
   <header class="topbar">
-    <div class="brand">⚔️ Times Table Arena</div><div class="spacer"></div>
-    <button class="iconbtn" id="musicBtn" aria-label="Music">🔊</button>
-    <button class="pill" id="langBtn">繁中</button>
+    <div class="brand"><span class="brandIcon">⚔️</span><span>Times Table Arena</span><span class="v2">V2</span></div>
+    <div class="spacer"></div>
+    <button id="musicBtn" class="topbtn" aria-label="Music">🔊</button>
+    <button id="langBtn" class="topbtn">繁中</button>
   </header>
 
   <main id="lobby" class="screen lobby active">
-    <div class="hero">
-      <section class="card">
-        <div class="welcome"><div class="avatar" id="heroAvatar">🧑‍🚀</div><div><div class="sub" data-i18n="welcome">Welcome back</div><h2 id="nickLabel">Player</h2><div class="sub" id="focusLabel">Adaptive 1×1–10×10</div></div></div>
-        <div class="statsrow"><div class="stat"><span class="sub" data-i18n="coins">Coins</span><b id="coinsLabel">0</b></div><div class="stat"><span class="sub">XP</span><b id="xpLabel">0</b></div><div class="stat"><span class="sub" data-i18n="streak">Streak</span><b id="streakLabel">0🔥</b></div></div>
-      </section>
-      <section class="card">
-        <div class="sub" data-i18n="todayMissions">Today’s missions</div><div class="missions" id="missions"></div>
-      </section>
+    <section class="lobbyHero panel">
+      <div class="profile"><div id="heroAvatar" class="avatar">🧑‍🚀</div><div><div class="muted" data-i18n="welcome">Welcome back</div><h1 id="nickLabel">Player</h1><div id="focusLabel" class="muted">Adaptive 1×1–10×10</div></div></div>
+      <div class="wallet"><div><span data-i18n="coins">Coins</span><b id="coinsLabel">0</b></div><div><span>XP</span><b id="xpLabel">0</b></div><div><span data-i18n="streak">Streak</span><b id="streakLabel">0🔥</b></div></div>
+    </section>
+
+    <section class="modePreview panel">
+      <div class="modeArt">
+        <div class="miniBase">🏰</div><div class="miniArmy">🪖🪖🪖</div><div class="miniShot"></div><div class="miniMonster">👾</div><div class="boom">💥</div>
+      </div>
+      <div><span class="eyebrow" data-i18n="battleMode">BATTLE MODE</span><h2 data-i18n="subtitle">Defend the base. Power up with maths.</h2><p class="muted" data-i18n="howText">Enemies keep moving while you play. Tap targets, spend skills, grab supplies, and answer a maths challenge about every 20–30 seconds.</p></div>
+    </section>
+
+    <button id="playBtn" class="playBtn"><span>▶</span><span data-i18n="play">PLAY BATTLE</span></button>
+    <div class="challengeRow"><input id="challengeInput" maxlength="240" autocomplete="off" placeholder="Paste challenge code"><button id="loadChallengeBtn" class="btn" data-i18n="load">Load</button></div>
+
+    <div class="menuGrid">
+      <button class="menuBtn" data-open="collection"><span>🎒</span><b data-i18n="collection">Collection</b></button>
+      <button class="menuBtn" data-open="progress"><span>📈</span><b data-i18n="progress">My Progress</b></button>
+      <button class="menuBtn" data-open="board"><span>🏆</span><b data-i18n="classboard">Classboard</b></button>
+      <button id="settingsBtn" class="menuBtn"><span>⚙️</span><b data-i18n="settings">Settings</b></button>
     </div>
-    <button class="playbtn" id="playBtn">▶ PLAY</button>
-    <div class="challengeRow"><input id="challengeInput" maxlength="220" autocomplete="off" placeholder="Paste challenge code"><button class="secondary" id="loadChallengeBtn" data-i18n="load">Load</button></div>
-    <div class="grid4">
-      <button class="tile" data-open="collection"><span class="ico">🎒</span><span data-i18n="collection">Collection</span></button>
-      <button class="tile" data-open="progress"><span class="ico">📈</span><span data-i18n="progress">My Progress</span></button>
-      <button class="tile" data-open="board"><span class="ico">🏆</span><span data-i18n="classboard">Classboard</span></button>
-      <button class="tile" id="settingsBtn"><span class="ico">⚙️</span><span data-i18n="settings">Settings</span></button>
-    </div>
-    <section class="card"><b data-i18n="how">How it works</b><p class="sub" style="margin-top:6px" data-i18n="howText">Fight, dodge and collect. A maths challenge appears only every 25–40 seconds. Correct answers boost your army. Wrong answers teach the fact and bring it back later.</p></section>
+
+    <section class="missions panel"><div class="panelTitle" data-i18n="todayMissions">Today’s missions</div><div id="missions" class="missionGrid"></div></section>
   </main>
 
-  <main id="game" class="screen game">
-    <div class="hud"><div class="hudLeft"><span class="hudBadge">🏰 <b id="baseHp">100</b>%</span><span class="hudBadge">🪖 <b id="soldierCount">5</b></span></div><div class="timer" id="timer">06:00</div><div class="hudRight"><span class="hudBadge">🔥 <b id="combo">0</b></span><span class="hudBadge">⭐ <b id="score">0</b></span></div></div>
-    <div class="miniProgress"><i id="timeBar" style="width:0%"></i></div>
-    <section class="battle" id="battle" aria-label="Battle arena">
-      <div class="skyDots"></div><div class="bossBanner" id="bossBanner">👹 FINAL BOSS</div><div class="toast" id="toast" aria-live="polite"></div><div class="reward" id="rewardBox">⚡ Power 1.0×</div>
-      <div class="base" id="base">BASE</div><div class="soldiers" id="soldiers"></div><div id="enemies"></div>
-      <div class="question hidden" id="questionPanel" role="dialog" aria-modal="true" aria-live="polite"></div>
+  <main id="game" class="screen gameScreen">
+    <div class="hud">
+      <div class="hudGroup"><span class="hudChip">🏰 <b id="baseHp">100</b>%</span><span class="hudChip">🪖 <b id="soldierCount">5</b></span></div>
+      <div class="hudCenter"><div id="stageName" class="stageName">MEADOW RUSH</div><div id="timer" class="timer">04:00</div></div>
+      <div class="hudGroup right"><span class="hudChip">🔥 <b id="combo">0</b></span><span class="hudChip">⭐ <b id="score">0</b></span></div>
+    </div>
+    <div class="timeTrack"><i id="timeBar"></i></div>
+
+    <section id="battleWrap" class="battleWrap" data-theme="meadow">
+      <canvas id="battleCanvas"></canvas>
+      <div id="screenFlash" class="screenFlash"></div>
+      <div id="bossWarning" class="bossWarning hidden"><div class="warningTop">⚠</div><b data-i18n="bossIncoming">BOSS INCOMING</b><span data-i18n="bossHint">Keep clearing minions!</span></div>
+      <div id="bossBar" class="bossBar hidden"><div class="bossName">👹 <span id="bossPhaseText">BOSS</span></div><div class="bossHpTrack"><i id="bossHpFill"></i><span id="bossShieldBadge" class="shieldBadge hidden">🛡 SHIELD</span></div></div>
+      <div id="toast" class="toast" aria-live="polite"></div>
+      <div id="comboPop" class="comboPop"></div>
+      <div id="supplyHint" class="supplyHint hidden" data-i18n="tapSupply">Tap the supply!</div>
+
+      <div class="powerHud"><span>⚡</span><div class="powerTrack"><i id="energyFill"></i></div><b id="energyText">0</b></div>
+      <div id="skillBar" class="skillBar" aria-label="Skills">
+        <button id="skillShot" class="skill" data-cost="25"><span>🎯</span><b data-i18n="powerShot">Power Shot</b><small>25⚡</small></button>
+        <button id="skillShield" class="skill" data-cost="35"><span>🛡️</span><b data-i18n="shield">Shield</b><small>35⚡</small></button>
+        <button id="skillBomb" class="skill" data-cost="60"><span>💣</span><b data-i18n="bomb">Bomb</b><small>60⚡</small></button>
+      </div>
+
+      <div id="questionPanel" class="questionPanel hidden" role="dialog" aria-modal="true" aria-live="polite"></div>
     </section>
   </main>
 
-  <main id="result" class="screen result"><div class="resultCard"><div class="sub" data-i18n="runComplete">Run complete</div><h2 id="resultTitle">Great run!</h2><div class="bigScore" id="resultScore">0</div><div class="sub" id="challengeBeat"></div><div class="resultGrid"><div class="resultStat"><span class="sub" data-i18n="accuracy">Accuracy</span><b id="resultAcc">0%</b></div><div class="resultStat"><span class="sub" data-i18n="bestCombo">Best combo</span><b id="resultCombo">0</b></div><div class="resultStat"><span class="sub" data-i18n="coinsEarned">Coins earned</span><b id="resultCoins">0</b></div><div class="resultStat"><span class="sub" data-i18n="bossDamage">Boss damage</span><b id="resultBoss">0</b></div></div><div class="actions"><button class="secondary" id="retryBtn" data-i18n="retry">Play again</button><button class="secondary" id="makeChallengeBtn" data-i18n="challengeFriend">Challenge a friend</button><button class="secondary" id="homeBtn" data-i18n="home">Home</button></div><div id="shareArea" style="display:none"><div class="shareCode" id="shareCode"></div><canvas id="qr" width="150" height="150" style="margin-top:10px;background:#fff;border-radius:10px;padding:6px"></canvas><div class="actions"><button class="secondary" id="shareBtn" data-i18n="share">Share</button></div></div></div></main>
+  <main id="result" class="screen resultScreen">
+    <section class="resultCard panel">
+      <div id="lootStage" class="lootStage">
+        <div id="lootChest" class="lootChest">🎁</div><div id="coinRain" class="coinRain"></div>
+      </div>
+      <span class="eyebrow" data-i18n="runComplete">RUN COMPLETE</span><h1 id="resultTitle">Great run!</h1><div id="resultScore" class="bigScore">0</div><div id="challengeBeat" class="muted"></div>
+      <div class="resultGrid"><div><span data-i18n="accuracy">Accuracy</span><b id="resultAcc">0%</b></div><div><span data-i18n="bestCombo">Best combo</span><b id="resultCombo">0</b></div><div><span data-i18n="coinsEarned">Coins earned</span><b id="resultCoins">+0</b></div><div><span data-i18n="bossDamage">Boss damage</span><b id="resultBoss">0%</b></div></div>
+      <div class="xpPanel"><div><span>XP</span><b id="xpGain">+0</b></div><div class="xpTrack"><i id="xpFill"></i></div></div>
+      <div id="lootReward" class="lootReward"></div>
+      <div class="actions"><button id="retryBtn" class="btn" data-i18n="retry">Play again</button><button id="makeChallengeBtn" class="btn" data-i18n="challengeFriend">Challenge a friend</button><button id="homeBtn" class="btn" data-i18n="home">Home</button></div>
+      <div id="shareArea" class="shareArea hidden"><div id="shareCode" class="shareCode"></div><canvas id="qr" width="144" height="144"></canvas><button id="shareBtn" class="btn" data-i18n="share">Share</button></div>
+    </section>
+  </main>
 
-  <main id="collection" class="screen panelScreen"><div class="panelHead"><button class="secondary backBtn">←</button><h2 data-i18n="collection">Collection</h2></div><div class="sub" data-i18n="collectionHint">Use coins to unlock. Pets give tiny, fair bonuses.</div><h3 data-i18n="avatars">Avatars</h3><div class="collection" id="avatars"></div><h3 data-i18n="pets">Pets</h3><div class="collection" id="pets"></div></main>
-  <main id="progress" class="screen panelScreen"><div class="panelHead"><button class="secondary backBtn">←</button><h2 data-i18n="progress">My Progress</h2></div><div class="hero"><section class="card"><div class="sub" data-i18n="lifetimeAccuracy">Lifetime accuracy</div><h1 id="lifeAcc">—</h1></section><section class="card"><div class="sub" data-i18n="factsAnswered">Facts answered</div><h1 id="lifeAnswered">0</h1></section></div><h3 data-i18n="weakFacts">Facts to practise</h3><div class="weakGrid" id="weakGrid"></div></main>
-  <main id="board" class="screen panelScreen"><div class="panelHead"><button class="secondary backBtn">←</button><h2 data-i18n="classboard">Classboard</h2></div><p class="sub" data-i18n="boardHint">No account needed. Import classmates’ challenge codes and their scores appear here on this device.</p><div class="challengeRow"><input id="boardCode" placeholder="Paste classmate code"><button class="secondary" id="importBoardBtn" data-i18n="import">Import</button></div><div class="list" id="boardList"></div></main>
+  <main id="collection" class="screen subScreen"><div class="subHead"><button class="btn backBtn">←</button><h2 data-i18n="collection">Collection</h2></div><p class="muted" data-i18n="collectionHint">Unlock looks with coins. Pet bonuses stay tiny so battles remain fair.</p><h3 data-i18n="avatars">Avatars</h3><div id="avatars" class="collectionGrid"></div><h3 data-i18n="pets">Pets</h3><div id="pets" class="collectionGrid"></div></main>
+  <main id="progress" class="screen subScreen"><div class="subHead"><button class="btn backBtn">←</button><h2 data-i18n="progress">My Progress</h2></div><div class="progressCards"><div class="panel"><span class="muted" data-i18n="lifetimeAccuracy">Lifetime accuracy</span><h1 id="lifeAcc">—</h1></div><div class="panel"><span class="muted" data-i18n="factsAnswered">Facts answered</span><h1 id="lifeAnswered">0</h1></div></div><h3 data-i18n="weakFacts">Facts to practise</h3><div id="weakGrid" class="weakGrid"></div></main>
+  <main id="board" class="screen subScreen"><div class="subHead"><button class="btn backBtn">←</button><h2 data-i18n="classboard">Classboard</h2></div><p class="muted" data-i18n="boardHint">No account needed. Import classmates’ challenge codes on this device.</p><div class="challengeRow"><input id="boardCode" placeholder="Paste classmate code"><button id="importBoardBtn" class="btn" data-i18n="import">Import</button></div><div id="boardList" class="boardList"></div></main>
 </div>
 
-<div class="rotate" id="rotatePrompt"><div><div class="phone">📱</div><h2 data-i18n="rotate">Rotate your phone</h2><p class="sub" style="margin:8px auto 14px;max-width:320px" data-i18n="rotateText">This game is designed for landscape mode.</p><button class="secondary" id="dismissRotate" data-i18n="continueAnyway">Continue anyway</button></div></div>
-<div class="modal hidden" id="setupModal"><form class="modalBox" id="setupForm"><h2 data-i18n="setupTitle">Player setup</h2><label class="sub" data-i18n="nickname">Nickname</label><input id="nicknameInput" maxlength="16" required placeholder="HappyTiger27"><label class="sub" data-i18n="focus">Training focus</label><select id="focusSelect"><option value="auto">Adaptive 1×1–10×10</option><option value="2">×2</option><option value="3">×3</option><option value="4">×4</option><option value="5">×5</option><option value="6">×6</option><option value="7">×7</option><option value="8">×8</option><option value="9">×9</option><option value="10">×10</option></select><div class="modalActions"><button class="secondary" type="submit" data-i18n="save">Save</button></div></form></div>
+<div id="rotatePrompt" class="rotatePrompt"><div class="rotateCard"><div class="rotatePhone">📱</div><h2 data-i18n="rotate">Rotate your phone</h2><p class="muted" data-i18n="rotateText">Battle Arena is designed for landscape mode.</p><button id="dismissRotate" class="btn" data-i18n="continueAnyway">Continue anyway</button></div></div>
 
-<script src="core.js"></script>
-<script src="game.js"></script>
-<script src="ui.js"></script>
+<div id="setupModal" class="modal hidden"><form id="setupForm" class="modalCard"><h2 data-i18n="setupTitle">Player setup</h2><label data-i18n="nickname">Nickname</label><input id="nicknameInput" maxlength="16" required placeholder="HappyTiger27"><label data-i18n="focus">Training focus</label><select id="focusSelect"><option value="auto">Adaptive 1×1–10×10</option><option value="2">×2</option><option value="3">×3</option><option value="4">×4</option><option value="5">×5</option><option value="6">×6</option><option value="7">×7</option><option value="8">×8</option><option value="9">×9</option><option value="10">×10</option></select><button class="playBtn compact" type="submit" data-i18n="save">Save</button></form></div>
+
+<script src="app.js"></script>
 </body>
 </html>
