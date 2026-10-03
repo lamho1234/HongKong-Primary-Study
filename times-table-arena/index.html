@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+<meta name="theme-color" content="#151833" />
+<title>Times Table Battle Arena</title>
+<link rel="stylesheet" href="style.css" />
+<script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="topbar">
+    <div class="brand">⚔️ Times Table Arena</div><div class="spacer"></div>
+    <button class="iconbtn" id="musicBtn" aria-label="Music">🔊</button>
+    <button class="pill" id="langBtn">繁中</button>
+  </header>
+
+  <main id="lobby" class="screen lobby active">
+    <div class="hero">
+      <section class="card">
+        <div class="welcome"><div class="avatar" id="heroAvatar">🧑‍🚀</div><div><div class="sub" data-i18n="welcome">Welcome back</div><h2 id="nickLabel">Player</h2><div class="sub" id="focusLabel">Adaptive 1×1–10×10</div></div></div>
+        <div class="statsrow"><div class="stat"><span class="sub" data-i18n="coins">Coins</span><b id="coinsLabel">0</b></div><div class="stat"><span class="sub">XP</span><b id="xpLabel">0</b></div><div class="stat"><span class="sub" data-i18n="streak">Streak</span><b id="streakLabel">0🔥</b></div></div>
+      </section>
+      <section class="card">
+        <div class="sub" data-i18n="todayMissions">Today’s missions</div><div class="missions" id="missions"></div>
+      </section>
+    </div>
+    <button class="playbtn" id="playBtn">▶ PLAY</button>
+    <div class="challengeRow"><input id="challengeInput" maxlength="220" autocomplete="off" placeholder="Paste challenge code"><button class="secondary" id="loadChallengeBtn" data-i18n="load">Load</button></div>
+    <div class="grid4">
+      <button class="tile" data-open="collection"><span class="ico">🎒</span><span data-i18n="collection">Collection</span></button>
+      <button class="tile" data-open="progress"><span class="ico">📈</span><span data-i18n="progress">My Progress</span></button>
+      <button class="tile" data-open="board"><span class="ico">🏆</span><span data-i18n="classboard">Classboard</span></button>
+      <button class="tile" id="settingsBtn"><span class="ico">⚙️</span><span data-i18n="settings">Settings</span></button>
+    </div>
+    <section class="card"><b data-i18n="how">How it works</b><p class="sub" style="margin-top:6px" data-i18n="howText">Fight, dodge and collect. A maths challenge appears only every 25–40 seconds. Correct answers boost your army. Wrong answers teach the fact and bring it back later.</p></section>
+  </main>
+
+  <main id="game" class="screen game">
+    <div class="hud"><div class="hudLeft"><span class="hudBadge">🏰 <b id="baseHp">100</b>%</span><span class="hudBadge">🪖 <b id="soldierCount">5</b></span></div><div class="timer" id="timer">06:00</div><div class="hudRight"><span class="hudBadge">🔥 <b id="combo">0</b></span><span class="hudBadge">⭐ <b id="score">0</b></span></div></div>
+    <div class="miniProgress"><i id="timeBar" style="width:0%"></i></div>
+    <section class="battle" id="battle" aria-label="Battle arena">
+      <div class="skyDots"></div><div class="bossBanner" id="bossBanner">👹 FINAL BOSS</div><div class="toast" id="toast" aria-live="polite"></div><div class="reward" id="rewardBox">⚡ Power 1.0×</div>
+      <div class="base" id="base">BASE</div><div class="soldiers" id="soldiers"></div><div id="enemies"></div>
+      <div class="question hidden" id="questionPanel" role="dialog" aria-modal="true" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <main id="result" class="screen result"><div class="resultCard"><div class="sub" data-i18n="runComplete">Run complete</div><h2 id="resultTitle">Great run!</h2><div class="bigScore" id="resultScore">0</div><div class="sub" id="challengeBeat"></div><div class="resultGrid"><div class="resultStat"><span class="sub" data-i18n="accuracy">Accuracy</span><b id="resultAcc">0%</b></div><div class="resultStat"><span class="sub" data-i18n="bestCombo">Best combo</span><b id="resultCombo">0</b></div><div class="resultStat"><span class="sub" data-i18n="coinsEarned">Coins earned</span><b id="resultCoins">0</b></div><div class="resultStat"><span class="sub" data-i18n="bossDamage">Boss damage</span><b id="resultBoss">0</b></div></div><div class="actions"><button class="secondary" id="retryBtn" data-i18n="retry">Play again</button><button class="secondary" id="makeChallengeBtn" data-i18n="challengeFriend">Challenge a friend</button><button class="secondary" id="homeBtn" data-i18n="home">Home</button></div><div id="shareArea" style="display:none"><div class="shareCode" id="shareCode"></div><canvas id="qr" width="150" height="150" style="margin-top:10px;background:#fff;border-radius:10px;padding:6px"></canvas><div class="actions"><button class="secondary" id="shareBtn" data-i18n="share">Share</button></div></div></div></main>
+
+  <main id="collection" class="screen panelScreen"><div class="panelHead"><button class="secondary backBtn">←</button><h2 data-i18n="collection">Collection</h2></div><div class="sub" data-i18n="collectionHint">Use coins to unlock. Pets give tiny, fair bonuses.</div><h3 data-i18n="avatars">Avatars</h3><div class="collection" id="avatars"></div><h3 data-i18n="pets">Pets</h3><div class="collection" id="pets"></div></main>
+  <main id="progress" class="screen panelScreen"><div class="panelHead"><button class="secondary backBtn">←</button><h2 data-i18n="progress">My Progress</h2></div><div class="hero"><section class="card"><div class="sub" data-i18n="lifetimeAccuracy">Lifetime accuracy</div><h1 id="lifeAcc">—</h1></section><section class="card"><div class="sub" data-i18n="factsAnswered">Facts answered</div><h1 id="lifeAnswered">0</h1></section></div><h3 data-i18n="weakFacts">Facts to practise</h3><div class="weakGrid" id="weakGrid"></div></main>
+  <main id="board" class="screen panelScreen"><div class="panelHead"><button class="secondary backBtn">←</button><h2 data-i18n="classboard">Classboard</h2></div><p class="sub" data-i18n="boardHint">No account needed. Import classmates’ challenge codes and their scores appear here on this device.</p><div class="challengeRow"><input id="boardCode" placeholder="Paste classmate code"><button class="secondary" id="importBoardBtn" data-i18n="import">Import</button></div><div class="list" id="boardList"></div></main>
+</div>
+
+<div class="rotate" id="rotatePrompt"><div><div class="phone">📱</div><h2 data-i18n="rotate">Rotate your phone</h2><p class="sub" style="margin:8px auto 14px;max-width:320px" data-i18n="rotateText">This game is designed for landscape mode.</p><button class="secondary" id="dismissRotate" data-i18n="continueAnyway">Continue anyway</button></div></div>
+<div class="modal hidden" id="setupModal"><form class="modalBox" id="setupForm"><h2 data-i18n="setupTitle">Player setup</h2><label class="sub" data-i18n="nickname">Nickname</label><input id="nicknameInput" maxlength="16" required placeholder="HappyTiger27"><label class="sub" data-i18n="focus">Training focus</label><select id="focusSelect"><option value="auto">Adaptive 1×1–10×10</option><option value="2">×2</option><option value="3">×3</option><option value="4">×4</option><option value="5">×5</option><option value="6">×6</option><option value="7">×7</option><option value="8">×8</option><option value="9">×9</option><option value="10">×10</option></select><div class="modalActions"><button class="secondary" type="submit" data-i18n="save">Save</button></div></form></div>
+
+<script src="app.js"></script>
+</body>
+</html>
